@@ -1,42 +1,3 @@
-"""
-==========================================================
-UNISCHED AI - UNIVERSAL IMPORT MANAGER
-==========================================================
-
-Purpose
--------
-Universal entry point for importing user-uploaded:
-
-    PDF
-    XLSX
-    XLS
-    CSV
-
-The manager automatically detects the file type and
-calls the appropriate importer.
-
-Architecture:
-
-    User File
-        |
-        v
-    ImportManager
-        |
-        +---- PDFImporter
-        |
-        +---- ExcelImporter
-        |
-        +---- CSVImporter
-        |
-        v
-    Universal Records
-
-The manager does NOT depend on a particular university,
-teacher name, subject, class, room, or timetable format.
-
-==========================================================
-"""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -45,24 +6,47 @@ from typing import Any, Dict, List
 from import_engine.pdf_importer import PDFImporter
 from import_engine.excel_importer import ExcelImporter
 from import_engine.csv_importer import CSVImporter
+from import_engine.universal_normalizer import UniversalNormalizer
 
 
 class ImportManager:
+    """
+    Universal timetable import manager.
+
+    Supported formats:
+        - PDF
+        - XLSX
+        - XLS
+        - CSV
+
+    Architecture:
+
+        Source File
+             |
+             v
+        Source Importer
+             |
+             v
+        UniversalNormalizer
+             |
+             v
+        Canonical Records
+
+    Important:
+        The manager normalizes existing information.
+        It does NOT invent missing day, slot, room, teacher,
+        class, or subject information.
+    """
 
     # ======================================================
     # SUPPORTED FILE TYPES
     # ======================================================
 
     SUPPORTED_EXTENSIONS = {
-
         ".pdf": "pdf",
-
         ".xlsx": "xlsx",
-
         ".xls": "xls",
-
         ".csv": "csv",
-
     }
 
     # ======================================================
@@ -70,9 +54,7 @@ class ImportManager:
     # ======================================================
 
     def __init__(self):
-
         self.imported_files: List[str] = []
-
         self.failed_files: List[str] = []
 
     # ======================================================
@@ -84,14 +66,9 @@ class ImportManager:
         file_path: str | Path
     ) -> str:
 
-        path = Path(
-            file_path
-        )
+        path = Path(file_path)
 
-        extension = (
-            path.suffix
-            .lower()
-        )
+        extension = path.suffix.lower()
 
         return ImportManager.SUPPORTED_EXTENSIONS.get(
             extension,
@@ -107,9 +84,7 @@ class ImportManager:
         file_path: str | Path
     ) -> Dict[str, Any]:
 
-        path = Path(
-            file_path
-        )
+        path = Path(file_path)
 
         # --------------------------------------------------
         # Does file exist?
@@ -118,25 +93,12 @@ class ImportManager:
         if not path.exists():
 
             return {
-
-                "valid":
-                    False,
-
-                "filename":
-                    path.name,
-
-                "extension":
-                    path.suffix.lower(),
-
-                "size_bytes":
-                    0,
-
-                "implemented":
-                    False,
-
-                "reason":
-                    "File does not exist."
-
+                "valid": False,
+                "filename": path.name,
+                "extension": path.suffix.lower(),
+                "size_bytes": 0,
+                "implemented": False,
+                "reason": "File does not exist.",
             }
 
         # --------------------------------------------------
@@ -146,35 +108,19 @@ class ImportManager:
         if not path.is_file():
 
             return {
-
-                "valid":
-                    False,
-
-                "filename":
-                    path.name,
-
-                "extension":
-                    path.suffix.lower(),
-
-                "size_bytes":
-                    0,
-
-                "implemented":
-                    False,
-
-                "reason":
-                    "Path is not a file."
-
+                "valid": False,
+                "filename": path.name,
+                "extension": path.suffix.lower(),
+                "size_bytes": 0,
+                "implemented": False,
+                "reason": "Path is not a file.",
             }
 
         # --------------------------------------------------
         # Extension
         # --------------------------------------------------
 
-        extension = (
-            path.suffix
-            .lower()
-        )
+        extension = path.suffix.lower()
 
         # --------------------------------------------------
         # File size
@@ -185,59 +131,33 @@ class ImportManager:
         if size_bytes <= 0:
 
             return {
-
-                "valid":
-                    False,
-
-                "filename":
-                    path.name,
-
-                "extension":
-                    extension,
-
-                "size_bytes":
-                    size_bytes,
-
-                "implemented":
+                "valid": False,
+                "filename": path.name,
+                "extension": extension,
+                "size_bytes": size_bytes,
+                "implemented": (
                     extension
-                    in ImportManager.SUPPORTED_EXTENSIONS,
-
-                "reason":
-                    "File is empty."
-
+                    in ImportManager.SUPPORTED_EXTENSIONS
+                ),
+                "reason": "File is empty.",
             }
 
         # --------------------------------------------------
         # Supported?
         # --------------------------------------------------
 
-        if extension not in (
-            ImportManager.SUPPORTED_EXTENSIONS
-        ):
+        if extension not in ImportManager.SUPPORTED_EXTENSIONS:
 
             return {
-
-                "valid":
-                    False,
-
-                "filename":
-                    path.name,
-
-                "extension":
-                    extension,
-
-                "size_bytes":
-                    size_bytes,
-
-                "implemented":
-                    False,
-
-                "reason":
-                    (
-                        "Unsupported file type: "
-                        f"{extension}"
-                    )
-
+                "valid": False,
+                "filename": path.name,
+                "extension": extension,
+                "size_bytes": size_bytes,
+                "implemented": False,
+                "reason": (
+                    "Unsupported file type: "
+                    f"{extension}"
+                ),
             }
 
         # --------------------------------------------------
@@ -245,26 +165,51 @@ class ImportManager:
         # --------------------------------------------------
 
         return {
-
-            "valid":
-                True,
-
-            "filename":
-                path.name,
-
-            "extension":
-                extension,
-
-            "size_bytes":
-                size_bytes,
-
-            "implemented":
-                True,
-
-            "reason":
-                None
-
+            "valid": True,
+            "filename": path.name,
+            "extension": extension,
+            "size_bytes": size_bytes,
+            "implemented": True,
+            "reason": None,
         }
+
+    # ======================================================
+    # NORMALIZE RECORDS
+    # ======================================================
+
+    @staticmethod
+    def normalize_records(
+        records: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Apply UniversalNormalizer to every imported record.
+
+        Important:
+            - Existing information is preserved.
+            - Missing information remains missing.
+            - No timetable values are invented.
+            - Unknown/custom fields are preserved.
+
+        This is the common normalization gateway for
+        PDF, Excel and CSV data.
+        """
+
+        normalized_records: List[Dict[str, Any]] = []
+
+        for record in records:
+
+            if not isinstance(record, dict):
+                continue
+
+            normalized = UniversalNormalizer.normalize_record(
+                record
+            )
+
+            normalized_records.append(
+                normalized
+            )
+
+        return normalized_records
 
     # ======================================================
     # IMPORT FILE
@@ -274,9 +219,8 @@ class ImportManager:
         self,
         file_path: str | Path
     ) -> Dict[str, Any]:
-
         """
-        Import one file.
+        Import one timetable file.
 
         Returns:
 
@@ -291,17 +235,13 @@ class ImportManager:
             }
         """
 
-        path = Path(
-            file_path
-        )
+        path = Path(file_path)
 
         # --------------------------------------------------
         # Validate
         # --------------------------------------------------
 
-        validation = self.validate_file(
-            path
-        )
+        validation = self.validate_file(path)
 
         if not validation["valid"]:
 
@@ -310,52 +250,27 @@ class ImportManager:
             )
 
             return {
-
-                "success":
-                    False,
-
-                "filename":
-                    path.name,
-
-                "file_type":
-                    self.detect_file_type(
-                        path
-                    ),
-
-                "records":
-                    [],
-
-                "record_count":
-                    0,
-
-                "inspection":
-                    None,
-
-                "warnings":
-                    [
-                        validation[
-                            "reason"
-                        ]
-                    ],
-
-                "error":
-                    validation[
-                        "reason"
-                    ],
-
+                "success": False,
+                "filename": path.name,
+                "file_type": self.detect_file_type(path),
+                "records": [],
+                "record_count": 0,
+                "inspection": None,
+                "warnings": [
+                    validation["reason"]
+                ],
+                "error": validation["reason"],
             }
 
         # --------------------------------------------------
         # Detect type
         # --------------------------------------------------
 
-        file_type = (
-            self.detect_file_type(
-                path
-            )
-        )
+        file_type = self.detect_file_type(path)
 
         try:
+
+            inspection = None
 
             # ==================================================
             # PDF
@@ -369,29 +284,6 @@ class ImportManager:
                     path
                 )
 
-                inspection = importer.inspect_file(
-                    path
-                )
-
-            # ==================================================
-            # EXCEL
-            # ==================================================
-
-            elif file_type in (
-                "xlsx",
-                "xls"
-            ):
-
-                importer = ExcelImporter()
-
-                records = importer.import_file(
-                    path
-                )
-
-                # Some Excel importers may provide
-                # inspect_file(). If not, inspection
-                # will simply be None.
-
                 if hasattr(
                     importer,
                     "inspect_file"
@@ -401,9 +293,29 @@ class ImportManager:
                         path
                     )
 
-                else:
+            # ==================================================
+            # EXCEL
+            # ==================================================
 
-                    inspection = None
+            elif file_type in (
+                "xlsx",
+                "xls",
+            ):
+
+                importer = ExcelImporter()
+
+                records = importer.import_file(
+                    path
+                )
+
+                if hasattr(
+                    importer,
+                    "inspect_file"
+                ):
+
+                    inspection = importer.inspect_file(
+                        path
+                    )
 
             # ==================================================
             # CSV
@@ -425,10 +337,6 @@ class ImportManager:
                     inspection = importer.inspect_file(
                         path
                     )
-
-                else:
-
-                    inspection = None
 
             # ==================================================
             # UNKNOWN
@@ -470,6 +378,18 @@ class ImportManager:
                 )
 
             # --------------------------------------------------
+            # UNIVERSAL NORMALIZATION
+            # --------------------------------------------------
+
+            raw_record_count = len(records)
+
+            records = self.normalize_records(
+                records
+            )
+
+            normalized_record_count = len(records)
+
+            # --------------------------------------------------
             # Success
             # --------------------------------------------------
 
@@ -481,7 +401,11 @@ class ImportManager:
             # Generate warnings
             # --------------------------------------------------
 
-            warnings = []
+            warnings: List[str] = []
+
+            # --------------------------------------------------
+            # Inspection warnings
+            # --------------------------------------------------
 
             if inspection:
 
@@ -505,32 +429,87 @@ class ImportManager:
                         "Dataset does not contain Slot information."
                     )
 
+            # --------------------------------------------------
+            # Normalization warning
+            # --------------------------------------------------
+
+            if (
+                raw_record_count
+                != normalized_record_count
+            ):
+
+                warnings.append(
+                    (
+                        "Some invalid/non-dictionary records "
+                        "were removed during normalization."
+                    )
+                )
+
+            # --------------------------------------------------
+            # Additional data-quality information
+            # --------------------------------------------------
+
+            missing_day = sum(
+                1
+                for record in records
+                if not str(
+                    record.get("day", "")
+                ).strip()
+            )
+
+            missing_slot = sum(
+                1
+                for record in records
+                if record.get("slot") is None
+            )
+
+            if records and missing_day == len(records):
+
+                warnings.append(
+                    "All records have missing Day information."
+                )
+
+            elif missing_day > 0:
+
+                warnings.append(
+                    (
+                        f"{missing_day} of "
+                        f"{len(records)} records "
+                        "have missing Day information."
+                    )
+                )
+
+            if records and missing_slot == len(records):
+
+                warnings.append(
+                    "All records have missing Slot information."
+                )
+
+            elif missing_slot > 0:
+
+                warnings.append(
+                    (
+                        f"{missing_slot} of "
+                        f"{len(records)} records "
+                        "have missing Slot information."
+                    )
+                )
+
+            # --------------------------------------------------
+            # Return
+            # --------------------------------------------------
+
             return {
-
-                "success":
-                    True,
-
-                "filename":
-                    path.name,
-
-                "file_type":
-                    file_type,
-
-                "records":
-                    records,
-
-                "record_count":
-                    len(records),
-
-                "inspection":
-                    inspection,
-
-                "warnings":
-                    warnings,
-
-                "error":
-                    None,
-
+                "success": True,
+                "filename": path.name,
+                "file_type": file_type,
+                "records": records,
+                "record_count": len(records),
+                "raw_record_count": raw_record_count,
+                "normalized_record_count": normalized_record_count,
+                "inspection": inspection,
+                "warnings": warnings,
+                "error": None,
             }
 
         except Exception as error:
@@ -540,31 +519,14 @@ class ImportManager:
             )
 
             return {
-
-                "success":
-                    False,
-
-                "filename":
-                    path.name,
-
-                "file_type":
-                    file_type,
-
-                "records":
-                    [],
-
-                "record_count":
-                    0,
-
-                "inspection":
-                    None,
-
-                "warnings":
-                    [],
-
-                "error":
-                    str(error),
-
+                "success": False,
+                "filename": path.name,
+                "file_type": file_type,
+                "records": [],
+                "record_count": 0,
+                "inspection": None,
+                "warnings": [],
+                "error": str(error),
             }
 
     # ======================================================
@@ -577,23 +539,28 @@ class ImportManager:
             str | Path
         ]
     ) -> Dict[str, Any]:
-
         """
         Import multiple user files.
 
-        Example:
+        Supported combinations include:
 
-            manager.import_files([
-                "faculty.pdf",
-                "class.pdf",
-                "timetable.xlsx",
-                "timetable.csv"
-            ])
+            PDF + PDF
+            PDF + Excel
+            PDF + CSV
+            Excel + CSV
+            PDF + Excel + CSV
+
+        All successful records pass through the same
+        UniversalNormalizer.
         """
 
-        results = []
+        results: List[
+            Dict[str, Any]
+        ] = []
 
-        all_records = []
+        all_records: List[
+            Dict[str, Any]
+        ] = []
 
         for file_path in file_paths:
 
@@ -605,66 +572,48 @@ class ImportManager:
                 result
             )
 
-            if result[
-                "success"
-            ]:
+            if result["success"]:
 
                 all_records.extend(
-                    result[
-                        "records"
-                    ]
+                    result["records"]
                 )
 
-        return {
+        successful_count = sum(
+            1
+            for result in results
+            if result["success"]
+        )
 
-            "success":
+        failed_count = (
+            len(results)
+            - successful_count
+        )
+
+        return {
+            "success": (
                 all(
-                    result[
-                        "success"
-                    ]
+                    result["success"]
                     for result in results
                 )
                 if results
-                else False,
+                else False
+            ),
 
-            "files":
-                results,
+            "files": results,
 
-            "records":
-                all_records,
+            "records": all_records,
 
-            "record_count":
-                len(
-                    all_records
-                ),
+            "record_count": len(
+                all_records
+            ),
 
-            "file_count":
-                len(
-                    results
-                ),
+            "file_count": len(
+                results
+            ),
 
-            "successful_files":
-                len(
-                    [
-                        result
-                        for result in results
-                        if result[
-                            "success"
-                        ]
-                    ]
-                ),
+            "successful_files": successful_count,
 
-            "failed_files":
-                len(
-                    [
-                        result
-                        for result in results
-                        if not result[
-                            "success"
-                        ]
-                    ]
-                ),
-
+            "failed_files": failed_count,
         }
 
     # ======================================================
@@ -677,6 +626,30 @@ class ImportManager:
 
         self.failed_files.clear()
 
+    # ======================================================
+    # SUMMARY
+    # ======================================================
+
+    def summary(self) -> Dict[str, Any]:
+        """
+        Return a simple import manager summary.
+        """
+
+        return {
+            "imported_files": list(
+                self.imported_files
+            ),
+            "failed_files": list(
+                self.failed_files
+            ),
+            "imported_count": len(
+                self.imported_files
+            ),
+            "failed_count": len(
+                self.failed_files
+            ),
+        }
+
 
 # ==========================================================
 # DIRECT TEST
@@ -685,34 +658,26 @@ class ImportManager:
 if __name__ == "__main__":
 
     print("=" * 80)
-
-    print(
-        "UNISCHED AI - IMPORT MANAGER"
-    )
-
+    print("UNISCHED AI - IMPORT MANAGER TEST")
     print("=" * 80)
 
     manager = ImportManager()
 
-    print()
+    print("\nSupported file types:")
 
-    print(
-        "Supported file types:"
-    )
-
-    for extension in (
-        ImportManager.SUPPORTED_EXTENSIONS
+    for extension, file_type in (
+        manager.SUPPORTED_EXTENSIONS.items()
     ):
-
         print(
-            "  ✓",
-            extension
+            f"  {extension:6} -> {file_type}"
         )
 
-    print()
+    print("\nManager initialized successfully.")
+
+    print("\nSummary:")
 
     print(
-        "Import Manager loaded successfully."
+        manager.summary()
     )
 
-    print("=" * 80)
+    print("\nImportManager test completed.")

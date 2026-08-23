@@ -1,0 +1,1170 @@
+from pathlib import Path
+from typing import List, Dict, Any, Optional
+import re
+import pdfplumber
+
+
+class PDFImporter:
+
+    # ======================================================
+    # VALIDATE FILE
+    # ======================================================
+
+    @staticmethod
+    def validate_file(
+        file_path: str | Path
+    ) -> Dict[str, Any]:
+
+        path = Path(file_path)
+
+        if not path.exists():
+            return {
+                "valid": False,
+                "reason": f"File not found: {path}"
+            }
+
+        if not path.is_file():
+            return {
+                "valid": False,
+                "reason": f"Not a file: {path}"
+            }
+
+        if path.suffix.lower() != ".pdf":
+            return {
+                "valid": False,
+                "reason": "File is not a PDF."
+            }
+
+        try:
+            with pdfplumber.open(path) as pdf:
+                page_count = len(pdf.pages)
+
+            return {
+                "valid": True,
+                "reason": "",
+                "pages": page_count
+            }
+
+        except Exception as e:
+            return {
+                "valid": False,
+                "reason": f"Unable to open PDF: {e}"
+            }
+
+    # ======================================================
+    # CLEAN TEXT
+    # ======================================================
+
+    @staticmethod
+    def clean_text(
+        text: Any
+    ) -> str:
+
+        if text is None:
+            return ""
+
+        text = str(text)
+
+        text = text.replace(
+            "\xa0",
+            " "
+        )
+
+        text = text.replace(
+            "\r",
+            "\n"
+        )
+
+        text = re.sub(
+            r"[ \t]+",
+            " ",
+            text
+        )
+
+        text = re.sub(
+            r"\n+",
+            "\n",
+            text
+        )
+
+        return text.strip()
+
+    # ======================================================
+    # PARSE SLOT HEADER
+    # ======================================================
+
+    @staticmethod
+    def parse_slot_header(
+        text: Any
+    ) -> Optional[int]:
+
+        if text is None:
+            return None
+
+        text = str(text).strip()
+
+        if not text:
+            return None
+
+        match = re.search(
+            r"^\s*(\d+)\s*(?:\n|\s+)",
+            text
+        )
+
+        if not match:
+            return None
+
+        try:
+            slot = int(
+                match.group(1)
+            )
+        except ValueError:
+            return None
+
+        if 1 <= slot <= 20:
+            return slot
+
+        return None
+
+    # ======================================================
+    # PARSE TIME
+    # ======================================================
+
+    @staticmethod
+    def parse_time(
+        text: Any
+    ) -> str:
+
+        if text is None:
+            return ""
+
+        text = str(text)
+
+        match = re.search(
+            r"(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})",
+            text
+        )
+
+        if not match:
+            return ""
+
+        return (
+            f"{match.group(1)} - "
+            f"{match.group(2)}"
+        )
+
+    # ======================================================
+    # DETECT DAY
+    # ======================================================
+
+    @staticmethod
+    def detect_day(
+        text: Any
+    ) -> str:
+
+        if text is None:
+            return ""
+
+        value = str(text).strip().lower()
+
+        day_map = {
+            "mo": "monday",
+            "mon": "monday",
+            "monday": "monday",
+
+            "tu": "tuesday",
+            "tue": "tuesday",
+            "tues": "tuesday",
+            "tuesday": "tuesday",
+
+            "we": "wednesday",
+            "wed": "wednesday",
+            "wednesday": "wednesday",
+
+            "th": "thursday",
+            "thu": "thursday",
+            "thur": "thursday",
+            "thurs": "thursday",
+            "thursday": "thursday",
+
+            "fr": "friday",
+            "fri": "friday",
+            "friday": "friday",
+
+            "sa": "saturday",
+            "sat": "saturday",
+            "saturday": "saturday",
+
+            "su": "sunday",
+            "sun": "sunday",
+            "sunday": "sunday",
+        }
+
+        return day_map.get(
+            value,
+            ""
+        )
+
+    # ======================================================
+    # DETECT TEACHER
+    # ======================================================
+
+    @staticmethod
+    def detect_teacher(
+        page
+    ) -> str:
+
+        text = ""
+
+        try:
+            text = page.extract_text() or ""
+        except Exception:
+            text = ""
+
+        if not text:
+            return ""
+
+        lines = [
+            line.strip()
+            for line in text.splitlines()
+            if line.strip()
+        ]
+
+        # --------------------------------------------------
+        # Common faculty title patterns
+        # --------------------------------------------------
+
+        patterns = [
+
+            r"\b(?:Dr\.?|Mr\.?|Ms\.?|Mrs\.?)\s+[A-Za-z][A-Za-z .'-]+",
+
+            r"\b[A-Z][A-Za-z]+\s+[A-Z][A-Za-z]+\s+[A-Z][A-Za-z]+\b",
+
+        ]
+
+        candidates = []
+
+        for line in lines:
+
+            for pattern in patterns:
+
+                matches = re.findall(
+                    pattern,
+                    line
+                )
+
+                for match in matches:
+
+                    candidate = (
+                        match
+                        if isinstance(match, str)
+                        else match[0]
+                    )
+
+                    candidate = candidate.strip()
+
+                    if len(candidate) < 3:
+                        continue
+
+                    candidates.append(
+                        candidate
+                    )
+
+        # --------------------------------------------------
+        # Prefer lines containing faculty markers
+        # --------------------------------------------------
+
+        for line in lines:
+
+            lower = line.lower()
+
+            if (
+                "faculty" in lower
+                or "teacher" in lower
+                or "prof." in lower
+                or "professor" in lower
+            ):
+
+                for pattern in patterns:
+
+                    matches = re.findall(
+                        pattern,
+                        line
+                    )
+
+                    if matches:
+
+                        candidate = matches[0]
+
+                        if isinstance(
+                            candidate,
+                            tuple
+                        ):
+                            candidate = candidate[0]
+
+                        return candidate.strip()
+
+        # --------------------------------------------------
+        # Return first reasonable faculty name
+        # --------------------------------------------------
+
+        if candidates:
+
+            return candidates[0]
+
+        return ""
+
+    # ======================================================
+    # DETECT CLASS
+    # ======================================================
+
+    @staticmethod
+    def detect_class(
+        text: str
+    ) -> str:
+
+        if not text:
+            return ""
+
+        # --------------------------------------------------
+        # Examples:
+        #
+        # 3CS-F
+        # 3-CS-IOT
+        # 3CSC
+        # 3CSAI-A
+        # --------------------------------------------------
+
+        patterns = [
+
+            r"\b\d+\s*-\s*[A-Za-z]+(?:-[A-Za-z0-9]+)*\b",
+
+            r"\b\d+[A-Za-z]+(?:-[A-Za-z0-9]+)*\b",
+
+        ]
+
+        candidates = []
+
+        for pattern in patterns:
+
+            matches = re.findall(
+                pattern,
+                text,
+                flags=re.IGNORECASE
+            )
+
+            candidates.extend(
+                matches
+            )
+
+        if not candidates:
+            return ""
+
+        # --------------------------------------------------
+        # Remove Group
+        # --------------------------------------------------
+
+        filtered = []
+
+        for candidate in candidates:
+
+            if candidate.lower() == "group":
+                continue
+
+            filtered.append(
+                candidate.strip()
+            )
+
+        if not filtered:
+            return ""
+
+        # Prefer class containing a hyphen
+        for candidate in filtered:
+
+            if "-" in candidate:
+                return candidate
+
+        return filtered[0]
+
+    # ======================================================
+    # DETECT ROOM
+    # ======================================================
+
+    @staticmethod
+    def detect_room(
+        text: str
+    ) -> str:
+
+        """
+        Detect classroom / laboratory room.
+
+        Examples:
+
+            303
+            304
+            CL-15
+            ECL-08
+            7F:EE-Lab13
+            5F::CP5
+
+        Important:
+        A subject such as:
+
+            Spoken-Latex
+
+        must NOT be treated as a room.
+
+        Therefore room codes must contain a digit.
+        """
+
+        if not text:
+            return ""
+
+        candidates = []
+
+        # --------------------------------------------------
+        # 1. Numeric classroom
+        # --------------------------------------------------
+
+        numeric_rooms = re.findall(
+            r"\b\d{2,4}\b",
+            text
+        )
+
+        candidates.extend(
+            numeric_rooms
+        )
+
+        # --------------------------------------------------
+        # 2. Standard room codes
+        # --------------------------------------------------
+
+        standard_rooms = re.findall(
+            r"\b[A-Z]{1,8}-[A-Za-z]*\d+[A-Za-z0-9-]*\b",
+            text,
+            flags=re.IGNORECASE
+        )
+
+        candidates.extend(
+            standard_rooms
+        )
+
+        # --------------------------------------------------
+        # 3. Complex laboratory codes
+        # --------------------------------------------------
+
+        lab_rooms = re.findall(
+            r"\b[A-Z0-9]{1,8}:+[A-Za-z0-9-]*\d+[A-Za-z0-9-]*\b",
+            text,
+            flags=re.IGNORECASE
+        )
+
+        candidates.extend(
+            lab_rooms
+        )
+
+        if not candidates:
+            return ""
+
+        # --------------------------------------------------
+        # Remove duplicates
+        # --------------------------------------------------
+
+        candidates = list(
+            dict.fromkeys(
+                candidates
+            )
+        )
+
+        # --------------------------------------------------
+        # Don't use class name as room
+        # --------------------------------------------------
+
+        class_name = PDFImporter.detect_class(
+            text
+        )
+
+        if class_name:
+
+            filtered = [
+
+                candidate
+
+                for candidate in candidates
+
+                if candidate.lower()
+                != class_name.lower()
+
+            ]
+
+            if filtered:
+                candidates = filtered
+
+        # --------------------------------------------------
+        # Prefer structured room codes
+        # --------------------------------------------------
+
+        complex_candidates = [
+
+            candidate
+
+            for candidate in candidates
+
+            if (
+                "-"
+                in candidate
+                or ":"
+                in candidate
+            )
+
+        ]
+
+        if complex_candidates:
+
+            return complex_candidates[-1].strip()
+
+        return candidates[-1].strip()
+
+    # ======================================================
+    # DETECT TYPE
+    # ======================================================
+
+    @staticmethod
+    def detect_type(
+        subject: str
+    ) -> str:
+
+        text = subject.lower()
+
+        if not text:
+            return ""
+
+        if "lab" in text:
+            return "Lab"
+
+        if "seminar" in text:
+            return "Seminar"
+
+        if "tutorial" in text:
+            return "Tutorial"
+
+        return "Theory"
+
+    # ======================================================
+    # CLEAN SUBJECT
+    # ======================================================
+
+    @classmethod
+    def clean_subject(
+        cls,
+        text: str,
+        class_name: str,
+        room: str
+    ) -> str:
+
+        subject = cls.clean_text(
+            text
+        )
+
+        if not subject:
+            return ""
+
+        # --------------------------------------------------
+        # Remove class
+        # --------------------------------------------------
+
+        if class_name:
+
+            subject = re.sub(
+                re.escape(
+                    class_name
+                ),
+                "",
+                subject,
+                flags=re.IGNORECASE
+            )
+
+        # --------------------------------------------------
+        # Remove room
+        # --------------------------------------------------
+
+        if room:
+
+            subject = re.sub(
+                re.escape(
+                    room
+                ),
+                "",
+                subject,
+                flags=re.IGNORECASE
+            )
+
+        # --------------------------------------------------
+        # Remove Group information
+        # --------------------------------------------------
+
+        subject = re.sub(
+            r"\bGroup\s*\d+\b",
+            "",
+            subject,
+            flags=re.IGNORECASE
+        )
+
+        # --------------------------------------------------
+        # Clean remaining whitespace
+        # --------------------------------------------------
+
+        subject = " ".join(
+            subject.split()
+        )
+
+        return subject.strip()
+
+    # ======================================================
+    # EXTRACT TABLES
+    # ======================================================
+
+    @staticmethod
+    def extract_tables_from_page(
+        page
+    ) -> List[List[List[Any]]]:
+
+        try:
+
+            tables = page.extract_tables()
+
+            if not tables:
+                return []
+
+            return tables
+
+        except Exception:
+
+            return []
+
+    # ======================================================
+    # DETECT SLOT HEADERS
+    # ======================================================
+
+    @classmethod
+    def detect_slot_headers(
+        cls,
+        row: List[Any]
+    ) -> Dict[int, Dict[str, Any]]:
+
+        slots = {}
+
+        for index, cell in enumerate(row):
+
+            slot = cls.parse_slot_header(
+                cell
+            )
+
+            if slot is None:
+                continue
+
+            slots[index] = {
+
+                "slot": slot,
+
+                "time": cls.parse_time(
+                    cell
+                ),
+
+            }
+
+        return slots
+
+    # ======================================================
+    # CREATE RECORD
+    # ======================================================
+
+    @classmethod
+    def create_record(
+        cls,
+        teacher: str,
+        day: str,
+        slot: Optional[int],
+        slot_time: str,
+        cell_text: str,
+        source_file: str,
+        source_page: int
+    ) -> Dict[str, Any]:
+
+        # IMPORTANT:
+        # We need to distinguish between:
+        #
+        # ""       = genuinely FREE
+        #
+        # nonempty = BUSY
+        #
+        # None is converted before reaching here.
+
+        cell_text = cls.clean_text(
+            cell_text
+        )
+
+        # --------------------------------------------------
+        # EMPTY CELL
+        # --------------------------------------------------
+
+        if not cell_text:
+
+            return {
+
+                "teacher": teacher,
+
+                "day": day,
+
+                "slot": slot,
+
+                "slot_time": slot_time,
+
+                "subject": "",
+
+                "room": "",
+
+                "class_name": "",
+
+                "group_name": "",
+
+                "type": "",
+
+                "length": "",
+
+                "lessons_per_week": "",
+
+                "available_classrooms": "",
+
+                "cycle": "",
+
+                "source_file": source_file,
+
+                "source_type": "pdf",
+
+                "source_page": source_page,
+
+                "raw_text": "",
+
+            }
+
+        # --------------------------------------------------
+        # CLASS
+        # --------------------------------------------------
+
+        class_name = cls.detect_class(
+            cell_text
+        )
+
+        # --------------------------------------------------
+        # ROOM
+        # --------------------------------------------------
+
+        room = cls.detect_room(
+            cell_text
+        )
+
+        # --------------------------------------------------
+        # SUBJECT
+        # --------------------------------------------------
+
+        subject = cls.clean_subject(
+            cell_text,
+            class_name,
+            room
+        )
+
+        # --------------------------------------------------
+        # TYPE
+        # --------------------------------------------------
+
+        record_type = cls.detect_type(
+            subject
+        )
+
+        return {
+
+            "teacher": teacher,
+
+            "day": day,
+
+            "slot": slot,
+
+            "slot_time": slot_time,
+
+            "subject": subject,
+
+            "room": room,
+
+            "class_name": class_name,
+
+            "group_name": "",
+
+            "type": record_type,
+
+            "length": "",
+
+            "lessons_per_week": "",
+
+            "available_classrooms": "",
+
+            "cycle": "",
+
+            "source_file": source_file,
+
+            "source_type": "pdf",
+
+            "source_page": source_page,
+
+            "raw_text": cell_text,
+
+        }
+
+    # ======================================================
+    # PROCESS ONE PAGE
+    # ======================================================
+
+    @classmethod
+    def process_page(
+        cls,
+        page,
+        page_number: int,
+        source_file: str
+    ) -> List[Dict[str, Any]]:
+
+        records = []
+
+        # --------------------------------------------------
+        # Detect teacher
+        # --------------------------------------------------
+
+        teacher = cls.detect_teacher(
+            page
+        )
+
+        # --------------------------------------------------
+        # Extract tables
+        # --------------------------------------------------
+
+        tables = cls.extract_tables_from_page(
+            page
+        )
+
+        for table in tables:
+
+            if not table:
+                continue
+
+            slot_headers = {}
+            header_index = None
+
+            # --------------------------------------------------
+            # Find slot header row
+            # --------------------------------------------------
+
+            for row_index, row in enumerate(table):
+
+                if not row:
+                    continue
+
+                detected = cls.detect_slot_headers(
+                    row
+                )
+
+                if detected:
+
+                    slot_headers = detected
+                    header_index = row_index
+
+                    break
+
+            if not slot_headers:
+                continue
+
+            # --------------------------------------------------
+            # Process timetable rows
+            # --------------------------------------------------
+
+            for row in table[header_index + 1:]:
+
+                if not row:
+                    continue
+
+                # --------------------------------------------------
+                # Detect day
+                # --------------------------------------------------
+
+                day = cls.detect_day(
+                    row[0]
+                )
+
+                if not day:
+                    continue
+
+                # ==================================================
+                # IMPORTANT MERGED-CELL LOGIC
+                # ==================================================
+                #
+                # pdfplumber extraction:
+                #
+                #   ""    -> genuinely empty cell
+                #
+                #   None  -> merged cell continuation
+                #
+                # Example from Abdul Naim Khan:
+                #
+                #   Slot 5 = "DE Lab..."
+                #   Slot 6 = None
+                #   Slot 7 = None
+                #   Slot 8 = ""
+                #
+                # Correct interpretation:
+                #
+                #   Slot 5 = BUSY
+                #   Slot 6 = BUSY
+                #   Slot 7 = BUSY
+                #   Slot 8 = FREE
+                #
+                # ==================================================
+
+                previous_cell_text = None
+
+                for column_index, slot_info in slot_headers.items():
+
+                    # --------------------------------------------------
+                    # Missing column
+                    # --------------------------------------------------
+
+                    if column_index >= len(row):
+
+                        continue
+
+                    raw_cell = row[column_index]
+
+                    # --------------------------------------------------
+                    # CASE 1:
+                    #
+                    # None means merged continuation.
+                    #
+                    # Reuse previous occupied cell.
+                    # --------------------------------------------------
+
+                    if raw_cell is None:
+
+                        if previous_cell_text:
+
+                            cell = previous_cell_text
+
+                        else:
+
+                            cell = ""
+
+                    # --------------------------------------------------
+                    # CASE 2:
+                    #
+                    # Normal cell.
+                    #
+                    # Empty string means genuinely free.
+                    # --------------------------------------------------
+
+                    else:
+
+                        cell = cls.clean_text(
+                            raw_cell
+                        )
+
+                    # --------------------------------------------------
+                    # Create record
+                    # --------------------------------------------------
+
+                    record = cls.create_record(
+
+                        teacher=teacher,
+
+                        day=day,
+
+                        slot=slot_info["slot"],
+
+                        slot_time=slot_info["time"],
+
+                        cell_text=cell,
+
+                        source_file=source_file,
+
+                        source_page=page_number,
+
+                    )
+
+                    records.append(
+                        record
+                    )
+
+                    # --------------------------------------------------
+                    # Update previous event
+                    #
+                    # IMPORTANT:
+                    #
+                    # Do NOT update previous_cell_text for None.
+                    #
+                    # This allows:
+                    #
+                    # Slot 5 = event
+                    # Slot 6 = None
+                    # Slot 7 = None
+                    #
+                    # to inherit Slot 5.
+                    # --------------------------------------------------
+
+                    if raw_cell is not None:
+
+                        if cell:
+
+                            previous_cell_text = cell
+
+                        else:
+
+                            # A genuine empty cell
+                            # breaks the merged region.
+
+                            previous_cell_text = None
+
+        return records
+
+    # ======================================================
+    # IMPORT PDF
+    # ======================================================
+
+    @classmethod
+    def import_file(
+        cls,
+        file_path: str | Path
+    ) -> List[Dict[str, Any]]:
+
+        validation = cls.validate_file(
+            file_path
+        )
+
+        if not validation["valid"]:
+
+            raise ValueError(
+                validation["reason"]
+            )
+
+        path = Path(
+            file_path
+        )
+
+        records = []
+
+        with pdfplumber.open(path) as pdf:
+
+            for page_number, page in enumerate(
+                pdf.pages,
+                start=1
+            ):
+
+                page_records = cls.process_page(
+
+                    page,
+
+                    page_number,
+
+                    path.name
+
+                )
+
+                records.extend(
+                    page_records
+                )
+
+        return records
+
+    # ======================================================
+    # INSPECT PDF
+    # ======================================================
+
+    @classmethod
+    def inspect_file(
+        cls,
+        file_path: str | Path
+    ) -> Dict[str, Any]:
+
+        path = Path(
+            file_path
+        )
+
+        validation = cls.validate_file(
+            path
+        )
+
+        if not validation["valid"]:
+
+            return validation
+
+        output = {
+
+            "file": str(path),
+
+            "pages": validation.get(
+                "pages",
+                0
+            ),
+
+            "records": 0,
+
+            "teachers": [],
+
+            "days": [],
+
+        }
+
+        try:
+
+            records = cls.import_file(
+                path
+            )
+
+            output["records"] = len(
+                records
+            )
+
+            teachers = set()
+            days = set()
+
+            for record in records:
+
+                teacher = record.get(
+                    "teacher",
+                    ""
+                )
+
+                day = record.get(
+                    "day",
+                    ""
+                )
+
+                if teacher:
+                    teachers.add(
+                        teacher
+                    )
+
+                if day:
+                    days.add(
+                        day
+                    )
+
+            output["teachers"] = sorted(
+                teachers
+            )
+
+            output["days"] = sorted(
+                days
+            )
+
+            return output
+
+        except Exception as e:
+
+            output["error"] = str(e)
+
+            return output

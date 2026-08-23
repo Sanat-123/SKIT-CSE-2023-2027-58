@@ -1,159 +1,341 @@
-from database.teacher_repository import TeacherRepository
-from database.subject_repository import SubjectRepository
-from database.timetable_repository import TimetableRepository
-
-
 class QueryPlanner:
+
     """
-    Converts an Intent + Extracted Entities + Day/Slot
-    into a repository call.
-
-    This class DOES NOT execute SQL directly.
-
-    It only decides:
-        1. Which repository to use
-        2. Which method to call
-        3. Which arguments to pass
+    Connects the NLP chatbot with the existing QueryEngine.
     """
 
     @staticmethod
-    def plan(intent, entities, day_slot):
+    def plan(
+        intent,
+        entities,
+        day_slot,
+        query_engine
+    ):
+
+        # ==================================================
+        # EXTRACT ENTITIES
+        # ==================================================
+
+        teachers = entities.get("teachers", [])
+        subjects = entities.get("subjects", [])
+        rooms = entities.get("rooms", [])
+        classes = entities.get("classes", [])
 
         teacher = (
-            entities["teachers"][0]["value"]
-            if entities["teachers"] else None
+            teachers[0]["value"]
+            if teachers
+            else None
         )
 
         subject = (
-            entities["subjects"][0]["value"]
-            if entities["subjects"] else None
+            subjects[0]["value"]
+            if subjects
+            else None
         )
 
         room = (
-            entities["rooms"][0]["value"]
-            if entities["rooms"] else None
+            rooms[0]["value"]
+            if rooms
+            else None
         )
 
         class_name = (
-            entities["classes"][0]["value"]
-            if entities["classes"] else None
+            classes[0]["value"]
+            if classes
+            else None
         )
 
-        group = (
-            entities["groups"][0]["value"]
-            if entities["groups"] else None
-        )
+        day = day_slot.get("day")
+        slot = day_slot.get("slot")
 
-        day = day_slot["day"]
-        slot = day_slot["slot"]
-
-        # ---------------------------------------------------
+        # ==================================================
         # FIND TEACHER
-        # ---------------------------------------------------
+        # ==================================================
 
         if intent == "FIND_TEACHER":
 
-            filters = {
-                "subject": subject,
-                "class": class_name,
-                "group": group,
-                "day": day,
-                "slot": slot
+            if not subject:
+
+                return {
+                    "count": 0,
+                    "results": [],
+                    "message": "Please specify a subject."
+                }
+
+            result = query_engine.subject_search(
+                subject
+            )
+
+            results = result.get(
+                "results",
+                []
+            )
+
+            # Filter by day
+            if day:
+
+                results = [
+                    r for r in results
+                    if str(
+                        r.get("day", "")
+                    ).lower() == day.lower()
+                ]
+
+            # Filter by slot
+            if slot is not None:
+
+                results = [
+                    r for r in results
+                    if r.get("slot") == slot
+                ]
+
+            return {
+                "count": len(results),
+                "results": results
             }
 
-            return TeacherRepository.find_teacher(filters)
-
-        # ---------------------------------------------------
+        # ==================================================
         # FIND SUBJECT
-        # ---------------------------------------------------
+        # ==================================================
 
         if intent == "FIND_SUBJECT":
 
-            filters = {
-                "teacher": teacher,
-                "class": class_name,
-                "group": group,
-                "day": day,
-                "slot": slot
+            if not teacher:
+
+                return {
+                    "count": 0,
+                    "results": [],
+                    "message": (
+                        "Please specify a faculty member."
+                    )
+                }
+
+            result = query_engine.teacher_search(
+                teacher
+            )
+
+            results = result.get(
+                "results",
+                []
+            )
+
+            # Filter by day
+            if day:
+
+                results = [
+                    r for r in results
+                    if str(
+                        r.get("day", "")
+                    ).lower() == day.lower()
+                ]
+
+            # Filter by slot
+            if slot is not None:
+
+                results = [
+                    r for r in results
+                    if r.get("slot") == slot
+                ]
+
+            return {
+                "count": len(results),
+                "results": results
             }
 
-            # Your current SubjectRepository does not yet
-            # have find_subject(filters)
-
-            if hasattr(SubjectRepository, "find_subject"):
-                return SubjectRepository.find_subject(filters)
-
-            return TimetableRepository.find_teacher(teacher)
-
-        # ---------------------------------------------------
+        # ==================================================
         # SHOW TIMETABLE
-        # ---------------------------------------------------
+        # ==================================================
 
         if intent == "SHOW_TIMETABLE":
 
-            filters = {
-                "teacher": teacher,
-                "subject": subject,
-                "class": class_name,
-                "group": group,
-                "room": room,
-                "day": day,
-                "slot": slot
+            # ------------------------------
+            # Teacher timetable
+            # ------------------------------
+
+            if teacher:
+
+                return query_engine.teacher_schedule(
+                    teacher=teacher,
+                    day=day,
+                    slot=slot
+                )
+
+            # ------------------------------
+            # Class timetable
+            # ------------------------------
+
+            if class_name:
+
+                return query_engine.class_schedule(
+                    class_name=class_name,
+                    day=day,
+                    slot=slot
+                )
+
+            # ------------------------------
+            # Room timetable
+            # ------------------------------
+
+            if room:
+
+                return query_engine.room_schedule(
+                    room=room,
+                    day=day,
+                    slot=slot
+                )
+
+            # ------------------------------
+            # Subject timetable
+            # ------------------------------
+
+            if subject:
+
+                result = query_engine.subject_search(
+                    subject
+                )
+
+                results = result.get(
+                    "results",
+                    []
+                )
+
+                if day:
+
+                    results = [
+                        r for r in results
+                        if str(
+                            r.get("day", "")
+                        ).lower() == day.lower()
+                    ]
+
+                if slot is not None:
+
+                    results = [
+                        r for r in results
+                        if r.get("slot") == slot
+                    ]
+
+                return {
+                    "count": len(results),
+                    "results": results
+                }
+
+            return {
+                "count": 0,
+                "results": [],
+                "message": (
+                    "Please specify a faculty, "
+                    "class, room, or subject."
+                )
             }
 
-            return TimetableRepository.find(filters)
-
-        # ---------------------------------------------------
+        # ==================================================
         # FIND ROOM
-        # ---------------------------------------------------
+        # ==================================================
 
         if intent == "FIND_ROOM":
 
-            filters = {
-                "teacher": teacher,
-                "subject": subject,
-                "class": class_name,
-                "group": group,
-                "room": room,
-                "day": day,
-                "slot": slot
+            if not subject:
+
+                return {
+                    "count": 0,
+                    "results": [],
+                    "message": (
+                        "Please specify a subject."
+                    )
+                }
+
+            result = query_engine.subject_search(
+                subject
+            )
+
+            results = result.get(
+                "results",
+                []
+            )
+
+            # Filter by day
+            if day:
+
+                results = [
+                    r for r in results
+                    if str(
+                        r.get("day", "")
+                    ).lower() == day.lower()
+                ]
+
+            # Filter by slot
+            if slot is not None:
+
+                results = [
+                    r for r in results
+                    if r.get("slot") == slot
+                ]
+
+            return {
+                "count": len(results),
+                "results": results
             }
 
-            return TimetableRepository.find(filters)
-
-        # ---------------------------------------------------
+        # ==================================================
         # FIND FREE FACULTY
-        # ---------------------------------------------------
+        # ==================================================
 
         if intent == "FIND_FREE_FACULTY":
 
-            filters = {
-                "teacher": None,
-                "subject": None,
-                "class": None,
-                "group": None,
-                "room": None,
-                "day": day,
-                "slot": slot
-            }
+            # A day is always required
+            if not day:
 
-            busy_rows = TimetableRepository.find(filters)
+                return {
+                    "count": 0,
+                    "results": [],
+                    "message": (
+                        "Please specify a day."
+                    )
+                }
 
-            busy_teachers = {
-                row[0]
-                for row in busy_rows
-            }
+            # --------------------------------------------------
+            # CASE 1:
+            # Specific slot requested
+            #
+            # Example:
+            # Available faculty Monday Slot 3
+            # --------------------------------------------------
 
-            all_teachers = TeacherRepository.get_all_teachers()
+            if slot is not None:
 
-            free_teachers = sorted(
-                set(all_teachers) - busy_teachers
+                return query_engine.faculty_free_slots(
+                    day=day,
+                    slot=slot,
+                    teacher=teacher
+                )
+
+            # --------------------------------------------------
+            # CASE 2:
+            # No slot requested
+            #
+            # Example:
+            # When is Dr. Abdul Naim Khan free on Saturday?
+            #
+            # Return all free slots for the teacher on that day.
+            # --------------------------------------------------
+
+            result = query_engine.faculty_free_slots(
+                day=day,
+                slot=None,
+                teacher=teacher
             )
 
-            return free_teachers
+            return result
 
-        # ---------------------------------------------------
-        # UNKNOWN
-        # ---------------------------------------------------
+        # ==================================================
+        # UNKNOWN INTENT
+        # ==================================================
 
-        return []
+        return {
+            "count": 0,
+            "results": [],
+            "message": (
+                "I could not understand the query."
+            )
+        }
