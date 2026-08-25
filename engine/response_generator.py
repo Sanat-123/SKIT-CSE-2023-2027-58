@@ -1,72 +1,190 @@
-class ResponseGenerator:
+def _generate_response(intent, result):
 
-    @staticmethod
-    def generate(intent, result):
+    # =====================================================
+    # SAFETY CHECK
+    # =====================================================
 
-        # =====================================================
-        # SAFETY CHECK
-        # =====================================================
+    if result is None:
+        return "No matching information found."
 
-        if result is None:
-            return "No matching information found."
+    # =====================================================
+    # SHOW TIMETABLE
+    # =====================================================
+    #
+    # IMPORTANT:
+    # teacher_schedule() returns only BUSY records in
+    # "results", but it also returns has_any_records=True
+    # when the teacher has timetable records that are FREE.
+    #
+    # Therefore SHOW_TIMETABLE must be handled before
+    # the generic "no data" logic.
+    # =====================================================
 
-        # =====================================================
-        # NORMALIZE RESULT
-        # =====================================================
+    if intent == "SHOW_TIMETABLE":
 
-        if isinstance(result, dict):
+        timetable = result if isinstance(result, dict) else {}
 
-            message = result.get("message")
+        teacher = timetable.get(
+            "teacher",
+            "This faculty"
+        )
 
-            count = result.get("count", 0)
-            data = result.get("results", [])
+        day = timetable.get("day")
 
-            # Only return planner message when there are
-            # actually no results.
-            if message and not data:
-                return message
+        results = timetable.get(
+            "results",
+            []
+        )
 
-        else:
+        has_any_records = timetable.get(
+            "has_any_records",
+            False
+        )
 
-            count = (
-                len(result)
-                if hasattr(result, "__len__")
-                else 0
+        # -------------------------------------------------
+        # CASE 1: Teacher has scheduled/busy classes
+        # -------------------------------------------------
+
+        if results:
+
+            lines = [
+                f"{teacher}'s schedule"
+                + (
+                    f" on {day.capitalize()}"
+                    if day
+                    else ""
+                )
+                + ":"
+            ]
+
+            for record in results:
+
+                slot = record.get(
+                    "slot",
+                    ""
+                )
+
+                slot_time = record.get(
+                    "slot_time",
+                    ""
+                )
+
+                subject = record.get(
+                    "subject",
+                    ""
+                )
+
+                room = record.get(
+                    "room",
+                    ""
+                )
+
+                line = f"• Slot {slot}"
+
+                if slot_time:
+                    line += f" — {slot_time}"
+
+                if subject:
+                    line += f" — {subject}"
+
+                if room:
+                    line += f" — Room {room}"
+
+                lines.append(line)
+
+            return "\n".join(lines)
+
+        # -------------------------------------------------
+        # CASE 2:
+        # Teacher has records but all are FREE
+        # -------------------------------------------------
+
+        if has_any_records:
+
+            if day:
+
+                return (
+                    f"{teacher} has no scheduled classes on "
+                    f"{day.capitalize()} — all slots are free."
+                )
+
+            return (
+                f"{teacher} has no scheduled classes — "
+                f"all available slots are free."
             )
 
-            data = result
+        # -------------------------------------------------
+        # CASE 3:
+        # No teacher/day records exist
+        # -------------------------------------------------
 
-        # =====================================================
-        # NO RESULTS
-        # =====================================================
+        return "No timetable information found."
 
-        if not data:
+    # =====================================================
+    # NORMALIZE RESULT FOR OTHER QUERY TYPES
+    # =====================================================
 
-            if intent == "FIND_FREE_FACULTY":
-                return (
-                    "No faculty members are free "
-                    "for the requested slot."
-                )
+    if isinstance(result, dict):
 
-            if intent == "FIND_TEACHER":
-                return (
-                    "No teacher found for "
-                    "the requested subject."
-                )
+        message = result.get(
+            "message"
+        )
 
-            if intent == "FIND_SUBJECT":
-                return (
-                    "No subjects found for "
-                    "the requested faculty."
-                )
+        count = result.get(
+            "count",
+            0
+        )
 
-            if intent == "FIND_ROOM":
-                return "No room information found."
+        data = result.get(
+            "results",
+            []
+        )
 
-            if intent == "SHOW_TIMETABLE":
-                return "No timetable information found."
+        if message and not data:
+            return message
 
-            return "No matching information found."
+    else:
+
+        count = (
+            len(result)
+            if hasattr(result, "__len__")
+            else 0
+        )
+
+        data = result
+
+    # =====================================================
+    # NO RESULTS
+    # =====================================================
+
+    if not data:
+
+        if intent == "FIND_FREE_FACULTY":
+
+            return (
+                "No faculty members are free "
+                "for the requested slot."
+            )
+
+        if intent == "FIND_TEACHER":
+
+            return (
+                "No teacher found for "
+                "the requested subject."
+            )
+
+        if intent == "FIND_SUBJECT":
+
+            return (
+                "No subjects found for "
+                "the requested faculty."
+            )
+
+        if intent == "FIND_ROOM":
+
+            return "No room information found."
+
+        return "No matching information found."
 
         # =====================================================
         # FIND TEACHER
@@ -424,90 +542,58 @@ class ResponseGenerator:
         # =====================================================
 
         if intent == "SHOW_TIMETABLE":
+            timetable = result if isinstance(result, dict) else {}
+            teacher = timetable.get("teacher", "This faculty")
+            day = timetable.get("day")
 
-            output = []
+            results = timetable.get("results", data)
+            has_any_records = timetable.get("has_any_records", False)
 
-            for row in data:
+            if results:
+                lines = [
+                    f"{teacher}'s schedule"
+                    + (f" on {day.capitalize()}" if day else "")
+                    + ":"
+                ]
 
-                if isinstance(row, dict):
+                for record in results:
+                    slot = record.get("slot", "")
+                    slot_time = record.get("slot_time", "")
+                    subject = record.get("subject", "")
+                    room = record.get("room", "")
 
-                    teacher = row.get(
-                        "teacher",
-                        ""
+                    line = f"• Slot {slot}"
+
+                    if slot_time:
+                        line += f" — {slot_time}"
+
+                    if subject:
+                        line += f" — {subject}"
+
+                    if room:
+                        line += f" — Room {room}"
+
+                    lines.append(line)
+
+                return "\n".join(lines)
+
+            # Records exist, but none are busy.
+            if has_any_records:
+                if day:
+                    return (
+                        f"{teacher} has no scheduled classes on "
+                        f"{day.capitalize()} — all slots are free."
                     )
 
-                    day = row.get(
-                        "day",
-                        ""
-                    )
+                return f"{teacher} has no scheduled classes — all available slots are free."
 
-                    slot = row.get(
-                        "slot",
-                        ""
-                    )
-
-                    subject = row.get(
-                        "subject",
-                        ""
-                    )
-
-                    room = row.get(
-                        "room",
-                        ""
-                    )
-
-                    class_name = row.get(
-                        "class_name",
-                        ""
-                    )
-
-                    group = row.get(
-                        "group_name",
-                        ""
-                    )
-
-                    lecture_type = row.get(
-                        "type",
-                        ""
-                    )
-
-                else:
-
-                    try:
-
-                        (
-                            teacher,
-                            day,
-                            slot,
-                            subject,
-                            room,
-                            class_name,
-                            group,
-                            lecture_type
-                        ) = row
-
-                    except Exception:
-                        continue
-
-                output.append(
-                    f"Day     : {day}\n"
-                    f"Slot    : {slot}\n"
-                    f"Teacher : {teacher}\n"
-                    f"Subject : {subject}\n"
-                    f"Room    : {room}\n"
-                    f"Class   : {class_name}\n"
-                    f"Group   : {group}\n"
-                    f"Type    : {lecture_type}"
-                )
-
-            return (
-                f"Timetable "
-                f"({len(output)} events):\n\n"
-                + "\n\n".join(output)
-            )
-
+            return "No timetable information found."
         # =====================================================
         # UNKNOWN / FALLBACK
         # =====================================================
 
         return str(data)
+
+
+class ResponseGenerator:
+    generate = staticmethod(_generate_response)

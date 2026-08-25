@@ -49,6 +49,52 @@ class QueryPlanner:
         slot = day_slot.get("slot")
 
         # ==================================================
+        # FACULTY STATUS
+        #
+        # Example:
+        # Is Mr. Nitin free on Monday slot 2?
+        # Is Mr. Nitin busy on Monday slot 2?
+        # ==================================================
+
+        if intent == "FACULTY_STATUS":
+
+            if not teacher:
+
+                return {
+                    "count": 0,
+                    "results": [],
+                    "message": (
+                        "Please specify a faculty member."
+                    )
+                }
+
+            if not day:
+
+                return {
+                    "count": 0,
+                    "results": [],
+                    "message": (
+                        "Please specify a day."
+                    )
+                }
+
+            if slot is None:
+
+                return {
+                    "count": 0,
+                    "results": [],
+                    "message": (
+                        "Please specify a slot number."
+                    )
+                }
+
+            return query_engine.faculty_status(
+                teacher=teacher,
+                day=day,
+                slot=slot
+            )
+
+        # ==================================================
         # FIND TEACHER
         # ==================================================
 
@@ -59,7 +105,9 @@ class QueryPlanner:
                 return {
                     "count": 0,
                     "results": [],
-                    "message": "Please specify a subject."
+                    "message": (
+                        "Please specify a subject."
+                    )
                 }
 
             result = query_engine.subject_search(
@@ -86,7 +134,9 @@ class QueryPlanner:
 
                 results = [
                     r for r in results
-                    if r.get("slot") == slot
+                    if query_engine._slot(
+                        r.get("slot")
+                    ) == query_engine._slot(slot)
                 ]
 
             return {
@@ -134,7 +184,9 @@ class QueryPlanner:
 
                 results = [
                     r for r in results
-                    if r.get("slot") == slot
+                    if query_engine._slot(
+                        r.get("slot")
+                    ) == query_engine._slot(slot)
                 ]
 
             return {
@@ -212,7 +264,9 @@ class QueryPlanner:
 
                     results = [
                         r for r in results
-                        if r.get("slot") == slot
+                        if query_engine._slot(
+                            r.get("slot")
+                        ) == query_engine._slot(slot)
                     ]
 
                 return {
@@ -254,7 +308,6 @@ class QueryPlanner:
                 []
             )
 
-            # Filter by day
             if day:
 
                 results = [
@@ -264,12 +317,13 @@ class QueryPlanner:
                     ).lower() == day.lower()
                 ]
 
-            # Filter by slot
             if slot is not None:
 
                 results = [
                     r for r in results
-                    if r.get("slot") == slot
+                    if query_engine._slot(
+                        r.get("slot")
+                    ) == query_engine._slot(slot)
                 ]
 
             return {
@@ -283,7 +337,7 @@ class QueryPlanner:
 
         if intent == "FIND_FREE_FACULTY":
 
-            # A day is always required
+            # A day is required
             if not day:
 
                 return {
@@ -295,8 +349,7 @@ class QueryPlanner:
                 }
 
             # --------------------------------------------------
-            # CASE 1:
-            # Specific slot requested
+            # Specific slot
             #
             # Example:
             # Available faculty Monday Slot 3
@@ -311,22 +364,17 @@ class QueryPlanner:
                 )
 
             # --------------------------------------------------
-            # CASE 2:
-            # No slot requested
+            # No slot
             #
             # Example:
             # When is Dr. Abdul Naim Khan free on Saturday?
-            #
-            # Return all free slots for the teacher on that day.
             # --------------------------------------------------
 
-            result = query_engine.faculty_free_slots(
+            return query_engine.faculty_free_slots(
                 day=day,
                 slot=None,
                 teacher=teacher
             )
-
-            return result
 
         # ==================================================
         # UNKNOWN INTENT

@@ -1,61 +1,8 @@
-"""
-UNISCHED AI - NATURAL LANGUAGE QUERY ENGINE
-
-Converts natural-language questions into structured queries
-against the UniSched QueryEngine.
-
-Supported query types:
-
-1. Faculty free
-2. Faculty status
-3. Teacher schedule
-4. Subject search
-5. Class schedule
-6. Room free
-7. Room status
-8. Free class
-9. General schedule queries
-
-Examples:
-
-    Which faculty is free on Monday slot 2?
-    Is Dr. Mehul Mahrishi free on Monday slot 3?
-    What is Dr. Mehul Mahrishi teaching on Monday?
-    Who teaches OS III?
-    What is the schedule of Dr. Mehul Mahrishi on Monday?
-    What is the timetable of 3CS-D on Monday?
-    Which room is free on Monday slot 4?
-"""
-
-from __future__ import annotations
-
-import inspect
 import re
-from typing import Any, Dict, List, Optional
+from typing import Optional, Tuple, List, Dict, Any
 
 
 class NaturalLanguageQuery:
-    """
-    Natural-language interface over the existing QueryEngine.
-
-    The QueryEngine is expected to provide methods/data such as:
-
-        faculty_free_slots
-        class_free_slots
-        room_free_slots
-        faculty_status
-        teacher_schedule
-        class_schedule
-        subject_search
-
-    The implementation intentionally uses room_free_slots()
-    because that is the public API currently available in
-    query_engine.py.
-    """
-
-    # =========================================================
-    # INITIALIZATION
-    # =========================================================
 
     def __init__(self, engine):
         self.engine = engine
@@ -65,198 +12,564 @@ class NaturalLanguageQuery:
     # =========================================================
 
     @staticmethod
-    def normalize_text(value: Any) -> str:
-        if value is None:
+    def normalize_lower(text: str) -> str:
+        if not text:
             return ""
 
         return " ".join(
-            str(value)
-            .replace("\xa0", " ")
-            .strip()
-            .split()
+            str(text).strip().lower().split()
         )
 
-    @classmethod
-    def normalize_lower(cls, value: Any) -> str:
-        return cls.normalize_text(value).lower()
+    @staticmethod
+    def normalize_text(text: str) -> str:
+        if not text:
+            return ""
 
-    # =========================================================
-    # DAY NORMALIZATION
-    # =========================================================
+        return " ".join(
+            str(text).strip().split()
+        )
 
-    @classmethod
-    def normalize_day(cls, value: Any) -> str:
-        value = cls.normalize_lower(value)
+    @staticmethod
+    def normalize_day(day: Optional[str]) -> Optional[str]:
 
-        mapping = {
-            "mo": "monday",
+        if not day:
+            return None
+
+        day = str(day).strip().lower()
+
+        days = {
             "mon": "monday",
             "monday": "monday",
 
-            "tu": "tuesday",
             "tue": "tuesday",
             "tues": "tuesday",
             "tuesday": "tuesday",
 
-            "we": "wednesday",
             "wed": "wednesday",
             "wednesday": "wednesday",
 
-            "th": "thursday",
             "thu": "thursday",
             "thur": "thursday",
             "thurs": "thursday",
             "thursday": "thursday",
 
-            "fr": "friday",
             "fri": "friday",
             "friday": "friday",
 
-            "sa": "saturday",
             "sat": "saturday",
             "saturday": "saturday",
 
-            "su": "sunday",
             "sun": "sunday",
             "sunday": "sunday",
         }
 
-        return mapping.get(value, value)
+        return days.get(day, day)
 
-    # =========================================================
-    # SLOT NORMALIZATION
-    # =========================================================
+    @staticmethod
+    def normalize_slot(slot: Optional[int]) -> Optional[int]:
 
-    @classmethod
-    def normalize_slot(cls, value: Any) -> Optional[int]:
-        if value is None:
+        if slot is None:
             return None
 
-        text = cls.normalize_text(value)
+        try:
+            slot = int(slot)
+
+            if 1 <= slot <= 8:
+                return slot
+
+        except Exception:
+            pass
+
+        return None
+
+    # =========================================================
+    # TEACHER NAME NORMALIZATION
+    # =========================================================
+
+    @staticmethod
+    def _normalize_teacher_name(name: str) -> str:
+
+        if not name:
+            return ""
+
+        name = str(name).strip()
+
+        name = re.sub(
+            r"\s+",
+            " ",
+            name
+        )
+
+        return name
+
+    # Public alias
+    normalize_teacher_name = _normalize_teacher_name
+
+    # =========================================================
+    # GET KNOWN TEACHERS
+    # =========================================================
+
+    def get_known_teachers(self) -> List[str]:
+
+        teachers = set()
+
+        # -----------------------------------------------------
+        # Try engine data
+        # -----------------------------------------------------
+
+        possible_attributes = [
+            "records",
+            "data",
+            "events",
+            "canonical_records"
+        ]
+
+        for attribute in possible_attributes:
+
+            try:
+
+                data = getattr(
+                    self.engine,
+                    attribute,
+                    None
+                )
+
+                if not data:
+                    continue
+
+                if isinstance(data, dict):
+
+                    iterable = data.values()
+
+                else:
+
+                    iterable = data
+
+                for record in iterable:
+
+                    if not isinstance(record, dict):
+                        continue
+
+                    teacher = (
+                        record.get("teacher")
+                        or record.get("faculty")
+                        or record.get("faculty_name")
+                        or record.get("teacher_name")
+                    )
+
+                    if teacher:
+
+                        teacher = self.normalize_teacher_name(
+                            teacher
+                        )
+
+                        if teacher:
+                            teachers.add(teacher)
+
+            except Exception:
+                pass
+
+        # -----------------------------------------------------
+        # Try matcher data
+        # -----------------------------------------------------
+
+        try:
+
+            matcher = getattr(
+                self.engine,
+                "matcher",
+                None
+            )
+
+            if matcher:
+
+                data = getattr(
+                    matcher,
+                    "records",
+                    None
+                )
+
+                if data:
+
+                    for record in data:
+
+                        if not isinstance(record, dict):
+                            continue
+
+                        teacher = record.get(
+                            "teacher"
+                        )
+
+                        if teacher:
+
+                            teacher = (
+                                self.normalize_teacher_name(
+                                    teacher
+                                )
+                            )
+
+                            if teacher:
+                                teachers.add(teacher)
+
+        except Exception:
+            pass
+
+        return sorted(
+            teachers,
+            key=lambda x: x.lower()
+        )
+
+    # =========================================================
+    # EXTRACT TEACHER
+    # =========================================================
+
+    def extract_teacher(
+        self,
+        query: str
+    ) -> Optional[str]:
+
+        text = self.normalize_text(query)
 
         if not text:
             return None
 
-        match = re.search(r"\b([1-8])\b", text)
+        lowered = text.lower()
 
-        if match:
-            return int(match.group(1))
+        # -----------------------------------------------------
+        # First: exact known teacher names
+        # -----------------------------------------------------
 
-        return None
-
-    # =========================================================
-    # QUERY PARSING - DAY
-    # =========================================================
-
-    @classmethod
-    def extract_day(cls, query: str) -> Optional[str]:
-
-        text = cls.normalize_lower(query)
-
-        patterns = [
-            ("monday", r"\bmonday\b|\bmon\b"),
-            ("tuesday", r"\btuesday\b|\btue\b|\btues\b"),
-            ("wednesday", r"\bwednesday\b|\bwed\b"),
-            ("thursday", r"\bthursday\b|\bthu\b|\bthur\b|\bthurs\b"),
-            ("friday", r"\bfriday\b|\bfri\b"),
-            ("saturday", r"\bsaturday\b|\bsat\b"),
-            ("sunday", r"\bsunday\b|\bsun\b"),
-        ]
-
-        for day, pattern in patterns:
-            if re.search(pattern, text):
-                return day
-
-        return None
-
-    # =========================================================
-    # QUERY PARSING - SLOT
-    # =========================================================
-
-    @classmethod
-    def extract_slot(cls, query: str) -> Optional[int]:
-
-        text = cls.normalize_lower(query)
-
-        patterns = [
-            r"\bslot\s*([1-8])\b",
-            r"\bperiod\s*([1-8])\b",
-            r"\bperiod\s+([1-8])\b",
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text)
-
-            if match:
-                return int(match.group(1))
-
-        return None
-
-    # =========================================================
-    # QUERY PARSING - FACULTY NAME
-    # =========================================================
-
-    def extract_teacher(self, query: str) -> Optional[str]:
-
-        text = self.normalize_text(query)
-
-        # First try exact known teachers from QueryEngine data.
         known_teachers = self.get_known_teachers()
 
         if known_teachers:
-            lowered = text.lower()
 
             matches = []
 
             for teacher in known_teachers:
-                teacher_clean = self.normalize_text(teacher)
+
+                teacher_clean = (
+                    self.normalize_teacher_name(
+                        teacher
+                    )
+                )
 
                 if not teacher_clean:
                     continue
 
-                if teacher_clean.lower() in lowered:
-                    matches.append(teacher_clean)
+                teacher_lower = teacher_clean.lower()
+
+                # Exact complete teacher name
+                if teacher_lower in lowered:
+
+                    matches.append(
+                        teacher_clean
+                    )
+
+                    continue
+
+                # -------------------------------------------------
+                # Allow user to omit title:
+                #
+                # "Mr. Nitin Goyal"
+                # "Nitin Goyal"
+                # -------------------------------------------------
+
+                without_title = re.sub(
+                    r"^(dr|mr|mrs|ms|prof)\.?\s+",
+                    "",
+                    teacher_clean,
+                    flags=re.IGNORECASE
+                )
+
+                without_title = without_title.strip()
+
+                if (
+                    without_title
+                    and without_title.lower() in lowered
+                ):
+
+                    matches.append(
+                        teacher_clean
+                    )
 
             if matches:
-                return max(matches, key=len)
 
-        # Generic faculty-title pattern.
+                return max(
+                    matches,
+                    key=len
+                )
+
+        # -----------------------------------------------------
+        # Generic faculty-title pattern
+        # -----------------------------------------------------
+
         pattern = re.compile(
-            r"\b(?:Dr\.?|Mr\.?|Mrs\.?|Ms\.?)\s+"
-            r"[A-Za-z][A-Za-z.\-']*(?:\s+[A-Za-z][A-Za-z.\-']*){1,6}",
-            re.IGNORECASE,
+            r"\b(?:Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Prof\.?)\s+"
+            r"[A-Za-z][A-Za-z.\-']*"
+            r"(?:\s+[A-Za-z][A-Za-z.\-']*){1,6}",
+            re.IGNORECASE
         )
 
         match = pattern.search(text)
 
         if match:
-            return self.normalize_text(match.group(0))
+
+            return self.normalize_teacher_name(
+                match.group(0)
+            )
 
         return None
 
     # =========================================================
-    # QUERY PARSING - CLASS
+    # EXTRACT DAY
+    # =========================================================
+
+    def extract_day(
+        self,
+        query: str
+    ) -> Optional[str]:
+
+        text = self.normalize_lower(query)
+
+        days = [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday"
+        ]
+
+        abbreviations = {
+            "mon": "monday",
+            "tue": "tuesday",
+            "tues": "tuesday",
+            "wed": "wednesday",
+            "thu": "thursday",
+            "thur": "thursday",
+            "thurs": "thursday",
+            "fri": "friday",
+            "sat": "saturday",
+            "sun": "sunday",
+        }
+
+        for day in days:
+
+            if re.search(
+                rf"\b{day}\b",
+                text
+            ):
+
+                return day
+
+        for short, full in abbreviations.items():
+
+            if re.search(
+                rf"\b{short}\b",
+                text
+            ):
+
+                return full
+
+        return None
+
+    # =========================================================
+    # EXTRACT SLOT
     # =========================================================
 
     @classmethod
-    def extract_class(cls, query: str) -> Optional[str]:
+    def extract_slot(
+        cls,
+        query: str
+    ) -> Optional[int]:
 
-        text = cls.normalize_text(query)
-
-        # Examples:
-        # 3CS-D
-        # 3CS-D
-        # 3CSA
-        # 3CS A
-        # 5CSB
-        # 7CSA
+        text = cls.normalize_lower(query)
 
         patterns = [
-            r"\b\d+\s*CS[- ]?[A-Z](?:[- ]?[A-Z])?\b",
-            r"\b\d+\s*CS[- ]?[A-Z]\b",
+
+            r"\bslot\s*([1-8])\b",
+
+            r"\bperiod\s*([1-8])\b",
+
+            r"\bperiod\s+([1-8])\b",
+
         ]
 
         for pattern in patterns:
+
+            match = re.search(
+                pattern,
+                text
+            )
+
+            if match:
+
+                return int(
+                    match.group(1)
+                )
+
+        return None
+
+    # =========================================================
+    # TIME CONVERSION
+    # =========================================================
+
+    @staticmethod
+    def _normalize_time(
+        hour: str,
+        minute: str,
+        ampm: Optional[str] = None
+    ) -> Optional[str]:
+
+        try:
+
+            h = int(hour)
+            m = int(minute)
+
+            if h < 0 or h > 23:
+                return None
+
+            if m < 0 or m > 59:
+                return None
+
+            if ampm:
+
+                ampm = ampm.lower()
+
+                if ampm == "pm" and h < 12:
+                    h += 12
+
+                if ampm == "am" and h == 12:
+                    h = 0
+
+            return f"{h:02d}:{m:02d}"
+
+        except Exception:
+
+            return None
+
+    # =========================================================
+    # EXTRACT TIME RANGE
+    # =========================================================
+
+    @classmethod
+    def extract_time_range(
+        cls,
+        query: str
+    ) -> Optional[Tuple[str, str]]:
+
+        text = cls.normalize_lower(query)
+
+        # -----------------------------------------------------
+        # 9:15 to 11:15
+        # 09:15 to 11:15
+        # 9.15 to 11.15
+        # -----------------------------------------------------
+
+        pattern = re.compile(
+            r"\b"
+            r"(\d{1,2})"
+            r"[:.]"
+            r"(\d{2})"
+            r"\s*"
+            r"(?:to|-|until|till)"
+            r"\s*"
+            r"(\d{1,2})"
+            r"[:.]"
+            r"(\d{2})"
+            r"\b"
+        )
+
+        match = pattern.search(text)
+
+        if match:
+
+            start = cls._normalize_time(
+                match.group(1),
+                match.group(2)
+            )
+
+            end = cls._normalize_time(
+                match.group(3),
+                match.group(4)
+            )
+
+            if start and end:
+
+                return (
+                    start,
+                    end
+                )
+
+        # -----------------------------------------------------
+        # 9:15 AM to 11:15 AM
+        # -----------------------------------------------------
+
+        pattern_ampm = re.compile(
+            r"\b"
+            r"(\d{1,2})"
+            r"[:.]"
+            r"(\d{2})"
+            r"\s*(am|pm)"
+            r"\s*"
+            r"(?:to|-|until|till)"
+            r"\s*"
+            r"(\d{1,2})"
+            r"[:.]"
+            r"(\d{2})"
+            r"\s*(am|pm)"
+            r"\b"
+        )
+
+        match = pattern_ampm.search(text)
+
+        if match:
+
+            start = cls._normalize_time(
+                match.group(1),
+                match.group(2),
+                match.group(3)
+            )
+
+            end = cls._normalize_time(
+                match.group(4),
+                match.group(5),
+                match.group(6)
+            )
+
+            if start and end:
+
+                return (
+                    start,
+                    end
+                )
+
+        return None
+
+    # =========================================================
+    # EXTRACT ROOM
+    # =========================================================
+
+    def extract_room(
+        self,
+        query: str
+    ) -> Optional[str]:
+
+        text = self.normalize_text(query)
+
+        patterns = [
+
+            r"\broom\s+([A-Za-z0-9\-]+)",
+
+            r"\bclassroom\s+([A-Za-z0-9\-]+)",
+
+            r"\broom\s*#\s*([A-Za-z0-9\-]+)",
+
+        ]
+
+        for pattern in patterns:
+
             match = re.search(
                 pattern,
                 text,
@@ -264,467 +577,81 @@ class NaturalLanguageQuery:
             )
 
             if match:
-                value = cls.normalize_text(match.group(0))
 
-                value = re.sub(
-                    r"\s+",
-                    "",
-                    value
-                )
-
-                return value
+                return match.group(1)
 
         return None
 
     # =========================================================
-    # QUERY PARSING - ROOM
+    # EXTRACT CLASS
     # =========================================================
 
-    @classmethod
-    def extract_room(cls, query: str) -> Optional[str]:
+    def extract_class(
+        self,
+        query: str
+    ) -> Optional[str]:
 
-        text = cls.normalize_text(query)
+        text = self.normalize_text(query)
 
-        # Only extract a room when the query explicitly
-        # talks about a room.
-        if not re.search(r"\broom\b|\bclassroom\b", text, re.I):
-            return None
+        patterns = [
 
-        # Room identifier can be:
-        # 303
-        # CL-22
-        # 7F:EE-Lab13
-        # 5F::CP5
-        pattern = re.compile(
-            r"\b(?:room\s*)?"
-            r"([A-Za-z0-9]+(?::+|-)[A-Za-z0-9:_-]+|\d{2,4})\b",
-            re.IGNORECASE,
-        )
+            r"\bclass\s+([A-Za-z0-9_.\-]+)",
 
-        match = pattern.search(text)
+            r"\bsection\s+([A-Za-z0-9_.\-]+)",
 
-        if match:
-            return cls.normalize_text(match.group(1))
-
-        return None
-
-    # =========================================================
-    # KNOWN TEACHERS
-    # =========================================================
-
-    def get_known_teachers(self) -> List[str]:
-
-        candidates = []
-
-        # Try QueryEngine attributes.
-        possible_attributes = [
-            "teachers",
-            "teacher_names",
-            "faculty",
         ]
 
-        for attribute in possible_attributes:
+        for pattern in patterns:
 
-            try:
-                value = getattr(
-                    self.engine,
-                    attribute,
-                    None
-                )
-
-                if value:
-                    if isinstance(value, dict):
-                        candidates.extend(
-                            str(k) for k in value.keys()
-                        )
-
-                    elif isinstance(value, (list, tuple, set)):
-                        candidates.extend(
-                            str(x) for x in value
-                        )
-
-            except Exception:
-                pass
-
-        # Try matcher records.
-        try:
-            matcher = getattr(
-                self.engine,
-                "matcher",
-                None
+            match = re.search(
+                pattern,
+                text,
+                re.IGNORECASE
             )
 
-            if matcher is not None:
+            if match:
 
-                records = getattr(
-                    matcher,
-                    "records",
-                    []
-                )
-
-                for record in records:
-
-                    if isinstance(record, dict):
-
-                        teacher = record.get(
-                            "teacher",
-                            ""
-                        )
-
-                        if teacher:
-                            candidates.append(
-                                str(teacher)
-                            )
-
-                events = getattr(
-                    matcher,
-                    "events",
-                    []
-                )
-
-                for event in events:
-
-                    if isinstance(event, dict):
-
-                        teacher = event.get(
-                            "teacher",
-                            ""
-                        )
-
-                        if teacher:
-                            candidates.append(
-                                str(teacher)
-                            )
-
-        except Exception:
-            pass
-
-        # Remove duplicates.
-        result = []
-        seen = set()
-
-        for teacher in candidates:
-
-            teacher = self.normalize_text(
-                teacher
-            )
-
-            key = teacher.lower()
-
-            if teacher and key not in seen:
-                seen.add(key)
-                result.append(teacher)
-
-        return result
-
-    # =========================================================
-    # GENERIC ENGINE CALL
-    # =========================================================
-
-    def call_engine_method(
-        self,
-        method_name: str,
-        **kwargs
-    ):
-
-        method = getattr(
-            self.engine,
-            method_name,
-            None
-        )
-
-        if method is None:
-            return []
-
-        try:
-            signature = inspect.signature(method)
-
-            accepted = {}
-
-            for name in signature.parameters:
-
-                if name == "self":
-                    continue
-
-                if name in kwargs:
-                    accepted[name] = kwargs[name]
-
-            return method(**accepted)
-
-        except TypeError:
-
-            # Fallback: call with no arguments if the method
-            # has an unusual signature.
-            try:
-                return method()
-            except Exception:
-                return []
-
-        except Exception:
-            return []
-
-    # =========================================================
-    # CONVERT RESULT TO LIST
-    # =========================================================
-
-    @staticmethod
-    def result_to_list(result: Any) -> List[Dict[str, Any]]:
-
-        if result is None:
-            return []
-
-        if isinstance(result, list):
-            return result
-
-        if isinstance(result, tuple):
-            return list(result)
-
-        if isinstance(result, dict):
-
-            # Some QueryEngine methods return:
-            # {"results": [...]}
-            for key in (
-                "results",
-                "events",
-                "records",
-                "data",
-            ):
-                value = result.get(key)
-
-                if isinstance(value, list):
-                    return value
-
-            return [result]
-
-        return []
-
-    # =========================================================
-    # FIND FIELD VALUE
-    # =========================================================
-
-    @staticmethod
-    def field(
-        record: Dict[str, Any],
-        *names: str
-    ) -> Any:
-
-        if not isinstance(record, dict):
-            return ""
-
-        for name in names:
-
-            if name in record:
-                return record[name]
-
-        return ""
-
-    # =========================================================
-    # FILTER BY DAY
-    # =========================================================
-
-    def filter_day(
-        self,
-        records: List[Dict[str, Any]],
-        day: Optional[str]
-    ) -> List[Dict[str, Any]]:
-
-        if not day:
-            return records
-
-        day = self.normalize_day(day)
-
-        output = []
-
-        for record in records:
-
-            record_day = self.normalize_day(
-                self.field(
-                    record,
-                    "day"
-                )
-            )
-
-            if record_day == day:
-                output.append(record)
-
-        return output
-
-    # =========================================================
-    # FILTER BY SLOT
-    # =========================================================
-
-    def filter_slot(
-        self,
-        records: List[Dict[str, Any]],
-        slot: Optional[int]
-    ) -> List[Dict[str, Any]]:
-
-        if slot is None:
-            return records
-
-        output = []
-
-        for record in records:
-
-            record_slot = self.normalize_slot(
-                self.field(
-                    record,
-                    "slot"
-                )
-            )
-
-            if record_slot == slot:
-                output.append(record)
-
-        return output
-
-    # =========================================================
-    # FILTER BY TEACHER
-    # =========================================================
-
-    def filter_teacher(
-        self,
-        records: List[Dict[str, Any]],
-        teacher: Optional[str]
-    ) -> List[Dict[str, Any]]:
-
-        if not teacher:
-            return records
-
-        target = self.normalize_lower(
-            teacher
-        )
-
-        output = []
-
-        for record in records:
-
-            current = self.normalize_lower(
-                self.field(
-                    record,
-                    "teacher"
-                )
-            )
-
-            if current == target:
-                output.append(record)
-
-        return output
-
-    # =========================================================
-    # FILTER BY SUBJECT
-    # =========================================================
-
-    def filter_subject(
-        self,
-        records: List[Dict[str, Any]],
-        subject: Optional[str]
-    ) -> List[Dict[str, Any]]:
-
-        if not subject:
-            return records
-
-        target = self.normalize_lower(
-            subject
-        )
-
-        output = []
-
-        for record in records:
-
-            current = self.normalize_lower(
-                self.field(
-                    record,
-                    "subject"
-                )
-            )
-
-            if target in current:
-                output.append(record)
-
-        return output
-
-    # =========================================================
-    # FILTER BY CLASS
-    # =========================================================
-
-    def filter_class(
-        self,
-        records: List[Dict[str, Any]],
-        class_name: Optional[str]
-    ) -> List[Dict[str, Any]]:
-
-        if not class_name:
-            return records
-
-        target = self.normalize_lower(
-            class_name
-        )
-
-        target = target.replace(
-            " ",
-            ""
-        )
-
-        output = []
-
-        for record in records:
-
-            current = self.normalize_lower(
-                self.field(
-                    record,
-                    "class_name",
-                    "class"
-                )
-            )
-
-            current = current.replace(
-                " ",
-                ""
-            )
-
-            if current == target:
-                output.append(record)
-
-        return output
-
-    # =========================================================
-    # PARSE SUBJECT
-    # =========================================================
-
-    @classmethod
-    def extract_subject(cls, query: str) -> Optional[str]:
-
-        text = cls.normalize_text(query)
-
-        # "Who teaches OS III?"
-        match = re.search(
-            r"\bwho\s+teaches\s+(.+?)\s*\??$",
-            text,
-            re.IGNORECASE
-        )
-
-        if match:
-            return cls.normalize_text(
-                match.group(1)
-            )
-
-        # "faculty teaching OS III"
-        match = re.search(
-            r"(?:teaching|teach|subject)\s+(.+?)\s*\??$",
-            text,
-            re.IGNORECASE
-        )
-
-        if match:
-            return cls.normalize_text(
-                match.group(1)
-            )
+                return match.group(1)
 
         return None
 
     # =========================================================
-    # INTENT DETECTION
+    # EXTRACT SUBJECT
+    # =========================================================
+
+    def extract_subject(
+        self,
+        query: str
+    ) -> Optional[str]:
+
+        text = self.normalize_text(query)
+
+        patterns = [
+
+            r"\bwho\s+teaches\s+(.+?)(?:\?|$)",
+
+            r"\bfaculty\s+teaching\s+(.+?)(?:\?|$)",
+
+            r"\bteachers\s+teaching\s+(.+?)(?:\?|$)",
+
+        ]
+
+        for pattern in patterns:
+
+            match = re.search(
+                pattern,
+                text,
+                re.IGNORECASE
+            )
+
+            if match:
+
+                return match.group(1).strip()
+
+        return None
+
+    # =========================================================
+    # DETECT INTENT
     # =========================================================
 
     def detect_intent(
@@ -746,27 +673,13 @@ class NaturalLanguageQuery:
                 or "teacher" in text
                 or "professor" in text
             )
-            and (
+            and
+            (
                 "free" in text
                 or "available" in text
             )
         ):
 
-            return "faculty_free"
-
-        # "who is free"
-        if (
-            ("who" in text or "which" in text)
-            and (
-                "free" in text
-                or "available" in text
-            )
-            and (
-                "faculty" in text
-                or "teacher" in text
-                or "professor" in text
-            )
-        ):
             return "faculty_free"
 
         # -----------------------------------------------------
@@ -778,11 +691,13 @@ class NaturalLanguageQuery:
                 "room" in text
                 or "classroom" in text
             )
-            and (
+            and
+            (
                 "free" in text
                 or "available" in text
             )
         ):
+
             return "room_free"
 
         # -----------------------------------------------------
@@ -794,11 +709,13 @@ class NaturalLanguageQuery:
                 "class" in text
                 or "section" in text
             )
-            and (
+            and
+            (
                 "free" in text
                 or "available" in text
             )
         ):
+
             return "class_free"
 
         # -----------------------------------------------------
@@ -813,7 +730,9 @@ class NaturalLanguageQuery:
             "free" in text
             or "available" in text
             or "busy" in text
+            or "occupied" in text
         ):
+
             return "faculty_status"
 
         # -----------------------------------------------------
@@ -826,6 +745,7 @@ class NaturalLanguageQuery:
             or "teaching" in text
             or "teach" in text
         ):
+
             return "teacher_schedule"
 
         # -----------------------------------------------------
@@ -836,12 +756,14 @@ class NaturalLanguageQuery:
             r"\bwho\s+teaches\b",
             text
         ):
+
             return "subject_search"
 
         if (
             "faculty teaching" in text
             or "teachers teaching" in text
         ):
+
             return "subject_search"
 
         # -----------------------------------------------------
@@ -857,6 +779,7 @@ class NaturalLanguageQuery:
             or "timetable" in text
             or "classes" in text
         ):
+
             return "class_schedule"
 
         # -----------------------------------------------------
@@ -868,47 +791,123 @@ class NaturalLanguageQuery:
                 "room" in text
                 or "classroom" in text
             )
-            and (
+            and
+            (
                 "schedule" in text
                 or "occupied" in text
                 or "busy" in text
             )
         ):
+
             return "room_status"
+
+        # -----------------------------------------------------
+        # GENERIC FACULTY FREE
+        # -----------------------------------------------------
+
+        if (
+            ("who" in text or "which" in text)
+            and
+            (
+                "free" in text
+                or "available" in text
+            )
+            and
+            "room" not in text
+            and
+            "classroom" not in text
+            and
+            "class" not in text
+            and
+            "section" not in text
+        ):
+
+            return "faculty_free"
 
         return "unknown"
 
     # =========================================================
-    # FACULTY FREE
+    # CALL ENGINE METHOD
     # =========================================================
 
-    def execute_faculty_free(
+    def call_engine_method(
         self,
-        day: Optional[str],
-        slot: Optional[int]
+        method_name: str,
+        **kwargs
+    ):
+
+        method = getattr(
+            self.engine,
+            method_name,
+            None
+        )
+
+        if not method:
+            return []
+
+        try:
+
+            return method(
+                **kwargs
+            )
+
+        except TypeError:
+
+            # Try positional fallback
+            try:
+
+                if method_name == "faculty_status":
+
+                    return method(
+                        kwargs.get("teacher"),
+                        kwargs.get("day"),
+                        kwargs.get("slot")
+                    )
+
+                return method()
+
+            except Exception:
+
+                return []
+
+        except Exception:
+
+            return []
+
+    # =========================================================
+    # RESULT TO LIST
+    # =========================================================
+
+    @staticmethod
+    def result_to_list(
+        result
     ) -> List[Dict[str, Any]]:
 
-        records = self.call_engine_method(
-            "faculty_free_slots",
-            day=day,
-            slot=slot
-        )
+        if result is None:
+            return []
 
-        records = self.result_to_list(
-            records
-        )
+        if isinstance(
+            result,
+            list
+        ):
 
-        records = self.filter_day(
-            records,
-            day
-        )
+            return result
 
-        records = self.filter_slot(
-            records,
-            slot
-        )
+        if isinstance(
+            result,
+            tuple
+        ):
 
-        return records
+            return list(result)
+
+        if isinstance(
+            result,
+            dict
+        ):
+
+            return [result]
+
+        return []
 
     # =========================================================
     # FACULTY STATUS
@@ -918,49 +917,39 @@ class NaturalLanguageQuery:
         self,
         teacher: Optional[str],
         day: Optional[str],
-        slot: Optional[int]
+        slot: Optional[int],
+        time_range: Optional[
+            Tuple[str, str]
+        ] = None
     ) -> List[Dict[str, Any]]:
 
         if not teacher:
             return []
 
-        # Prefer QueryEngine's faculty_status method.
-        method = getattr(
-            self.engine,
-            "faculty_status",
-            None
-        )
+        # -----------------------------------------------------
+        # TIME RANGE QUERY
+        # -----------------------------------------------------
 
-        if method is not None:
+        if (
+            time_range
+            and hasattr(
+                self.engine,
+                "faculty_status_for_period"
+            )
+            and day
+        ):
+
+            start_time, end_time = time_range
 
             try:
 
-                signature = inspect.signature(
-                    method
-                )
-
-                kwargs = {}
-
-                for name in signature.parameters:
-
-                    if name == "self":
-                        continue
-
-                    if name in (
-                        "teacher",
-                        "faculty",
-                        "name",
-                    ):
-                        kwargs[name] = teacher
-
-                    elif name == "day":
-                        kwargs[name] = day
-
-                    elif name == "slot":
-                        kwargs[name] = slot
-
-                result = method(
-                    **kwargs
+                result = (
+                    self.engine.faculty_status_for_period(
+                        teacher,
+                        day,
+                        start_time,
+                        end_time
+                    )
                 )
 
                 if isinstance(
@@ -968,18 +957,6 @@ class NaturalLanguageQuery:
                     dict
                 ):
 
-                    if "results" in result:
-                        return self.result_to_list(
-                            result["results"]
-                        )
-
-                    if "records" in result:
-                        return self.result_to_list(
-                            result["records"]
-                        )
-
-                    # Busy status can return a
-                    # structured dictionary.
                     return [result]
 
                 return self.result_to_list(
@@ -987,129 +964,103 @@ class NaturalLanguageQuery:
                 )
 
             except Exception:
+
                 pass
 
-        # Fallback using events.
-        events = self.call_engine_method(
-            "teacher_schedule",
+        # -----------------------------------------------------
+        # NORMAL SLOT QUERY
+        # -----------------------------------------------------
+
+        result = self.call_engine_method(
+            "faculty_status",
             teacher=teacher,
-            day=day
+            day=day,
+            slot=slot
         )
 
-        events = self.result_to_list(
-            events
+        return self.result_to_list(
+            result
         )
-
-        events = self.filter_day(
-            events,
-            day
-        )
-
-        events = self.filter_slot(
-            events,
-            slot
-        )
-
-        return events
 
     # =========================================================
-    # TEACHER SCHEDULE
+    # FACULTY FREE
     # =========================================================
 
-    def execute_teacher_schedule(
+    def execute_faculty_free(
         self,
-        teacher: Optional[str],
-        day: Optional[str]
+        day: Optional[str],
+        slot: Optional[int],
+        time_range: Optional[
+            Tuple[str, str]
+        ] = None
     ) -> List[Dict[str, Any]]:
 
-        if not teacher:
-            return []
+        # -----------------------------------------------------
+        # Time-range query
+        # -----------------------------------------------------
 
-        records = self.call_engine_method(
-            "teacher_schedule",
-            teacher=teacher,
-            day=day
+        if (
+            time_range
+            and hasattr(
+                self.engine,
+                "faculty_free_for_period"
+            )
+            and day
+        ):
+
+            try:
+
+                start_time, end_time = time_range
+
+                result = (
+                    self.engine.faculty_free_for_period(
+                        day,
+                        start_time,
+                        end_time
+                    )
+                )
+
+                return self.result_to_list(
+                    result
+                )
+
+            except Exception:
+
+                pass
+
+        # -----------------------------------------------------
+        # Normal faculty-free query
+        # -----------------------------------------------------
+
+        result = self.call_engine_method(
+            "faculty_free",
+            day=day,
+            slot=slot
         )
 
-        records = self.result_to_list(
-            records
+        return self.result_to_list(
+            result
         )
-
-        records = self.filter_day(
-            records,
-            day
-        )
-
-        return records
 
     # =========================================================
-    # SUBJECT SEARCH
+    # CLASS FREE
     # =========================================================
 
-    def execute_subject_search(
+    def execute_class_free(
         self,
-        subject: Optional[str]
+        day: Optional[str],
+        slot: Optional[int]
     ) -> List[Dict[str, Any]]:
 
-        if not subject:
-            return []
-
-        records = self.call_engine_method(
-            "subject_search",
-            subject=subject
+        result = self.call_engine_method(
+            "class_free",
+            day=day,
+            slot=slot
         )
 
-        records = self.result_to_list(
-            records
+        return self.result_to_list(
+            result
         )
-
-        if not records:
-
-            # Fallback to canonical events.
-            events = self.call_engine_method(
-                "get_events"
-            )
-
-            records = self.result_to_list(
-                events
-            )
-
-            records = self.filter_subject(
-                records,
-                subject
-            )
-
-        return records
-
-    # =========================================================
-    # CLASS SCHEDULE
-    # =========================================================
-
-    def execute_class_schedule(
-        self,
-        class_name: Optional[str],
-        day: Optional[str]
-    ) -> List[Dict[str, Any]]:
-
-        if not class_name:
-            return []
-
-        records = self.call_engine_method(
-            "class_schedule",
-            class_name=class_name,
-            day=day
-        )
-
-        records = self.result_to_list(
-            records
-        )
-
-        records = self.filter_day(
-            records,
-            day
-        )
-
-        return records
 
     # =========================================================
     # ROOM FREE
@@ -1122,98 +1073,56 @@ class NaturalLanguageQuery:
         slot: Optional[int]
     ) -> List[Dict[str, Any]]:
 
-        # IMPORTANT:
-        #
-        # QueryEngine provides:
-        #
-        #     room_free_slots()
-        #
-        # It does NOT provide:
-        #
-        #     find_room_free_slots()
-        #
-        # Therefore use room_free_slots here.
-
-        records = self.call_engine_method(
-            "room_free_slots",
+        result = self.call_engine_method(
+            "room_free",
             room=room,
             day=day,
             slot=slot
         )
 
-        records = self.result_to_list(
-            records
+        return self.result_to_list(
+            result
         )
-
-        records = self.filter_day(
-            records,
-            day
-        )
-
-        records = self.filter_slot(
-            records,
-            slot
-        )
-
-        # If a specific room was requested,
-        # filter to that room.
-        if room:
-
-            target = self.normalize_lower(
-                room
-            )
-
-            filtered = []
-
-            for record in records:
-
-                current = self.normalize_lower(
-                    self.field(
-                        record,
-                        "room"
-                    )
-                )
-
-                if current == target:
-                    filtered.append(
-                        record
-                    )
-
-            records = filtered
-
-        return records
 
     # =========================================================
-    # CLASS FREE
+    # TEACHER SCHEDULE
     # =========================================================
 
-    def execute_class_free(
+    def execute_teacher_schedule(
         self,
-        day: Optional[str],
-        slot: Optional[int]
+        teacher: Optional[str],
+        day: Optional[str]
     ) -> List[Dict[str, Any]]:
 
-        records = self.call_engine_method(
-            "class_free_slots",
-            day=day,
-            slot=slot
+        result = self.call_engine_method(
+            "teacher_schedule",
+            teacher=teacher,
+            day=day
         )
 
-        records = self.result_to_list(
-            records
+        return self.result_to_list(
+            result
         )
 
-        records = self.filter_day(
-            records,
-            day
+    # =========================================================
+    # CLASS SCHEDULE
+    # =========================================================
+
+    def execute_class_schedule(
+        self,
+        class_name: Optional[str],
+        day: Optional[str]
+    ) -> List[Dict[str, Any]]:
+
+        result = self.call_engine_method(
+            "class_schedule",
+            class_name=class_name,
+            day=day
         )
 
-        records = self.filter_slot(
-            records,
-            slot
+        return self.result_to_list(
+            result
         )
-
-        return records
 
     # =========================================================
     # ROOM STATUS
@@ -1226,34 +1135,37 @@ class NaturalLanguageQuery:
         slot: Optional[int]
     ) -> List[Dict[str, Any]]:
 
-        if not room:
-            return []
-
-        # Try QueryEngine's room schedule.
-        records = self.call_engine_method(
-            "room_schedule",
+        result = self.call_engine_method(
+            "room_status",
             room=room,
-            day=day
+            day=day,
+            slot=slot
         )
 
-        records = self.result_to_list(
-            records
+        return self.result_to_list(
+            result
         )
-
-        records = self.filter_day(
-            records,
-            day
-        )
-
-        records = self.filter_slot(
-            records,
-            slot
-        )
-
-        return records
 
     # =========================================================
-    # MAIN EXECUTE METHOD
+    # SUBJECT SEARCH
+    # =========================================================
+
+    def execute_subject_search(
+        self,
+        subject: Optional[str]
+    ) -> List[Dict[str, Any]]:
+
+        result = self.call_engine_method(
+            "subject_search",
+            subject=subject
+        )
+
+        return self.result_to_list(
+            result
+        )
+
+    # =========================================================
+    # EXECUTE QUERY
     # =========================================================
 
     def execute(
@@ -1261,25 +1173,13 @@ class NaturalLanguageQuery:
         query: str
     ) -> Dict[str, Any]:
 
-        query = self.normalize_text(
+        intent = self.detect_intent(
             query
         )
 
-        if not query:
-
-            return {
-                "intent": "unknown",
-                "success": False,
-                "count": 0,
-                "results": [],
-                "message": (
-                    "Please enter a timetable question."
-                ),
-            }
-
-        # -----------------------------------------------------
-        # Extract entities
-        # -----------------------------------------------------
+        teacher = self.extract_teacher(
+            query
+        )
 
         day = self.extract_day(
             query
@@ -1289,93 +1189,15 @@ class NaturalLanguageQuery:
             query
         )
 
-        teacher = self.extract_teacher(
-            query
-        )
-
-        class_name = self.extract_class(
-            query
-        )
-
-        room = self.extract_room(
-            query
-        )
-
-        subject = self.extract_subject(
+        time_range = self.extract_time_range(
             query
         )
 
         # -----------------------------------------------------
-        # Detect intent
+        # UNKNOWN
         # -----------------------------------------------------
 
-        intent = self.detect_intent(
-            query
-        )
-
-        # -----------------------------------------------------
-        # Execute intent
-        # -----------------------------------------------------
-
-        if intent == "faculty_free":
-
-            results = self.execute_faculty_free(
-                day,
-                slot
-            )
-
-        elif intent == "faculty_status":
-
-            results = self.execute_faculty_status(
-                teacher,
-                day,
-                slot
-            )
-
-        elif intent == "teacher_schedule":
-
-            results = self.execute_teacher_schedule(
-                teacher,
-                day
-            )
-
-        elif intent == "subject_search":
-
-            results = self.execute_subject_search(
-                subject
-            )
-
-        elif intent == "class_schedule":
-
-            results = self.execute_class_schedule(
-                class_name,
-                day
-            )
-
-        elif intent == "room_free":
-
-            results = self.execute_room_free(
-                room,
-                day,
-                slot
-            )
-
-        elif intent == "class_free":
-
-            results = self.execute_class_free(
-                day,
-                slot
-            )
-
-        elif intent == "room_status":
-
-            results = self.execute_room_status(
-                room,
-                day,
-                slot
-            )
-
-        else:
+        if intent == "unknown":
 
             return {
                 "intent": "unknown",
@@ -1386,29 +1208,209 @@ class NaturalLanguageQuery:
                     "I could not understand the query. "
                     "Try asking about faculty, classes, "
                     "rooms, subjects, schedules, or free slots."
-                ),
+                )
             }
 
-        results = self.result_to_list(
-            results
-        )
+        # -----------------------------------------------------
+        # FACULTY STATUS
+        # -----------------------------------------------------
+
+        if intent == "faculty_status":
+
+            records = self.execute_faculty_status(
+                teacher,
+                day,
+                slot,
+                time_range
+            )
+
+            return {
+                "intent": intent,
+                "success": bool(records),
+                "count": len(records),
+                "results": records,
+                "teacher": teacher,
+                "day": day,
+                "slot": slot,
+                "time_range": time_range
+            }
+
+        # -----------------------------------------------------
+        # FACULTY FREE
+        # -----------------------------------------------------
+
+        if intent == "faculty_free":
+
+            records = self.execute_faculty_free(
+                day,
+                slot,
+                time_range
+            )
+
+            return {
+                "intent": intent,
+                "success": True,
+                "count": len(records),
+                "results": records,
+                "day": day,
+                "slot": slot,
+                "time_range": time_range
+            }
+
+        # -----------------------------------------------------
+        # CLASS FREE
+        # -----------------------------------------------------
+
+        if intent == "class_free":
+
+            records = self.execute_class_free(
+                day,
+                slot
+            )
+
+            return {
+                "intent": intent,
+                "success": True,
+                "count": len(records),
+                "results": records,
+                "day": day,
+                "slot": slot
+            }
+
+        # -----------------------------------------------------
+        # ROOM FREE
+        # -----------------------------------------------------
+
+        if intent == "room_free":
+
+            room = self.extract_room(
+                query
+            )
+
+            records = self.execute_room_free(
+                room,
+                day,
+                slot
+            )
+
+            return {
+                "intent": intent,
+                "success": True,
+                "count": len(records),
+                "results": records,
+                "room": room,
+                "day": day,
+                "slot": slot
+            }
+
+        # -----------------------------------------------------
+        # TEACHER SCHEDULE
+        # -----------------------------------------------------
+
+        if intent == "teacher_schedule":
+
+            records = self.execute_teacher_schedule(
+                teacher,
+                day
+            )
+
+            return {
+                "intent": intent,
+                "success": True,
+                "count": len(records),
+                "results": records,
+                "teacher": teacher,
+                "day": day
+            }
+
+        # -----------------------------------------------------
+        # CLASS SCHEDULE
+        # -----------------------------------------------------
+
+        if intent == "class_schedule":
+
+            class_name = self.extract_class(
+                query
+            )
+
+            records = self.execute_class_schedule(
+                class_name,
+                day
+            )
+
+            return {
+                "intent": intent,
+                "success": True,
+                "count": len(records),
+                "results": records,
+                "class_name": class_name,
+                "day": day
+            }
+
+        # -----------------------------------------------------
+        # ROOM STATUS
+        # -----------------------------------------------------
+
+        if intent == "room_status":
+
+            room = self.extract_room(
+                query
+            )
+
+            records = self.execute_room_status(
+                room,
+                day,
+                slot
+            )
+
+            return {
+                "intent": intent,
+                "success": True,
+                "count": len(records),
+                "results": records,
+                "room": room,
+                "day": day,
+                "slot": slot
+            }
+
+        # -----------------------------------------------------
+        # SUBJECT SEARCH
+        # -----------------------------------------------------
+
+        if intent == "subject_search":
+
+            subject = self.extract_subject(
+                query
+            )
+
+            records = self.execute_subject_search(
+                subject
+            )
+
+            return {
+                "intent": intent,
+                "success": True,
+                "count": len(records),
+                "results": records,
+                "subject": subject
+            }
+
+        # -----------------------------------------------------
+        # FALLBACK
+        # -----------------------------------------------------
 
         return {
             "intent": intent,
-            "success": True,
-            "count": len(results),
-            "results": results,
-
-            "day": day,
-            "slot": slot,
-            "teacher": teacher,
-            "class_name": class_name,
-            "room": room,
-            "subject": subject,
+            "success": False,
+            "count": 0,
+            "results": [],
+            "message": (
+                "No handler available for this query."
+            )
         }
 
     # =========================================================
-    # FRIENDLY ANSWER
+    # ANSWER
     # =========================================================
 
     def answer(
@@ -1420,461 +1422,469 @@ class NaturalLanguageQuery:
             query
         )
 
-        if not result.get(
-            "success",
-            False
-        ):
+        intent = result.get(
+            "intent"
+        )
+
+        # -----------------------------------------------------
+        # UNKNOWN
+        # -----------------------------------------------------
+
+        if intent == "unknown":
+
             return result.get(
                 "message",
                 "I could not understand the query."
             )
 
-        intent = result.get(
-            "intent"
-        )
-
-        records = result.get(
-            "results",
-            []
-        )
-
-        count = result.get(
-            "count",
-            len(records)
-        )
-
-        day = result.get(
-            "day"
-        )
-
-        slot = result.get(
-            "slot"
-        )
-
-        teacher = result.get(
-            "teacher"
-        )
-
-        # These values are also returned by execute().
-        # Keep them available for all friendly-answer branches.
-        subject = result.get(
-            "subject"
-        )
-
-        class_name = result.get(
-            "class_name"
-        )
-
-        room = result.get(
-            "room"
-        )
-
         # -----------------------------------------------------
-        # Faculty free
-        # -----------------------------------------------------
-
-        if intent == "faculty_free":
-
-            if not records:
-
-                return (
-                    f"No faculty member is free"
-                    f"{' on ' + day if day else ''}"
-                    f"{' at slot ' + str(slot) if slot else ''}."
-                )
-
-            names = []
-
-            seen = set()
-
-            for record in records:
-
-                name = self.field(
-                    record,
-                    "teacher"
-                )
-
-                name = self.normalize_text(
-                    name
-                )
-
-                if (
-                    name
-                    and name.lower() not in seen
-                ):
-
-                    seen.add(
-                        name.lower()
-                    )
-
-                    names.append(
-                        name
-                    )
-
-            if not names:
-
-                return f"{count} free slot(s) found."
-
-            return (
-                f"Found {len(names)} free faculty member(s):\n"
-                + "\n".join(
-                    f"- {name}"
-                    for name in names
-                )
-            )
-
-        # -----------------------------------------------------
-        # Faculty status
+        # FACULTY STATUS
         # -----------------------------------------------------
 
         if intent == "faculty_status":
 
-            if records:
-
-                return (
-                    f"{teacher} is busy"
-                    f"{' on ' + day if day else ''}"
-                    f"{', slot ' + str(slot) if slot else ''}."
-                )
-
-            return (
-                f"{teacher} appears to be free"
-                f"{' on ' + day if day else ''}"
-                f"{', slot ' + str(slot) if slot else ''}."
+            teacher = result.get(
+                "teacher"
             )
 
-        # -----------------------------------------------------
-        # Teacher schedule
-        # -----------------------------------------------------
+            day = result.get(
+                "day"
+            )
 
-        if intent == "teacher_schedule":
+            time_range = result.get(
+                "time_range"
+            )
+
+            records = result.get(
+                "results",
+                []
+            )
 
             if not records:
 
                 return (
-                    f"No scheduled events found for "
-                    f"{teacher}"
+                    f"No faculty status information "
+                    f"found for {teacher}"
                     f"{' on ' + day if day else ''}."
                 )
 
-            lines = [
-                f"Found {len(records)} scheduled event(s):"
-            ]
+            data = records[0]
+
+            status = data.get(
+                "status"
+            )
+
+            query_lower = self.normalize_lower(
+                query
+            )
+
+            # -------------------------------------------------
+            # What did the USER ask?
+            # -------------------------------------------------
+
+            asked_busy = (
+                "busy" in query_lower
+                or "occupied" in query_lower
+            )
+
+            asked_free = (
+                "free" in query_lower
+                or "available" in query_lower
+            )
+
+            # =================================================
+            # TIME RANGE
+            # =================================================
+
+            if time_range:
+
+                start_time = time_range[0]
+                end_time = time_range[1]
+
+                # ---------------------------------------------
+                # Actual status = FREE
+                # ---------------------------------------------
+
+                if status == "free":
+
+                    slots = data.get(
+                        "slots",
+                        []
+                    )
+
+                    # User asked BUSY
+                    if asked_busy:
+
+                        return (
+                            f"No, {teacher} is not busy on "
+                            f"{day} from {start_time} to "
+                            f"{end_time}. "
+                            f"{teacher} is free during this period."
+                        )
+
+                    # User asked FREE
+                    return (
+                        f"Yes, {teacher} is free on "
+                        f"{day} from {start_time} to "
+                        f"{end_time}. "
+                        f"Free slots: {slots}."
+                    )
+
+                # ---------------------------------------------
+                # Actual status = BUSY
+                # ---------------------------------------------
+
+                if status == "busy":
+
+                    # User asked FREE
+                    if asked_free:
+
+                        return (
+                            f"No, {teacher} is not free on "
+                            f"{day} from {start_time} to "
+                            f"{end_time}. "
+                            f"{teacher} is busy during this period."
+                        )
+
+                    # User asked BUSY
+                    return (
+                        f"Yes, {teacher} is busy on "
+                        f"{day} from {start_time} to "
+                        f"{end_time}."
+                    )
+
+                # ---------------------------------------------
+                # Unknown status
+                # ---------------------------------------------
+
+                return (
+                    f"The status of {teacher} is unknown "
+                    f"for {day} from {start_time} to "
+                    f"{end_time}."
+                )
+
+            # =================================================
+            # NORMAL SLOT QUERY
+            # =================================================
+
+            slot = result.get(
+                "slot"
+            )
+
+            # ---------------------------------------------
+            # Actual status = FREE
+            # ---------------------------------------------
+
+            if status == "free":
+
+                if asked_busy:
+
+                    return (
+                        f"No, {teacher} is not busy on "
+                        f"{day}"
+                        f"{' in slot ' + str(slot) if slot else ''}. "
+                        f"{teacher} is free."
+                    )
+
+                return (
+                    f"Yes, {teacher} is free on "
+                    f"{day}"
+                    f"{' in slot ' + str(slot) if slot else ''}."
+                )
+
+            # ---------------------------------------------
+            # Actual status = BUSY
+            # ---------------------------------------------
+
+            if status == "busy":
+
+                if asked_free:
+
+                    return (
+                        f"No, {teacher} is not free on "
+                        f"{day}"
+                        f"{' in slot ' + str(slot) if slot else ''}. "
+                        f"{teacher} is busy."
+                    )
+
+                return (
+                    f"Yes, {teacher} is busy on "
+                    f"{day}"
+                    f"{' in slot ' + str(slot) if slot else ''}."
+                )
+
+            return (
+                f"Status of {teacher} could not be determined."
+            )
+
+        # -----------------------------------------------------
+        # FACULTY FREE
+        # -----------------------------------------------------
+
+        if intent == "faculty_free":
+
+            records = result.get(
+                "results",
+                []
+            )
+
+            day = result.get(
+                "day"
+            )
+
+            time_range = result.get(
+                "time_range"
+            )
+
+            if not records:
+
+                return (
+                    f"No free faculty found"
+                    f"{' on ' + day if day else ''}."
+                )
+
+            names = []
 
             for record in records:
 
-                lines.append(
-                    "- "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "day"
-                        )
-                    )
-                    + " | Slot "
-                    + str(
-                        self.field(
-                            record,
-                            "slot"
-                        )
-                    )
-                    + " | "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "subject"
-                        )
-                    )
-                    + " | Room: "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "room"
-                        )
-                    )
-                    + " | Class: "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "class_name",
-                            "class"
-                        )
-                    )
+                if not isinstance(
+                    record,
+                    dict
+                ):
+                    continue
+
+                teacher = record.get(
+                    "teacher"
                 )
 
-            return "\n".join(lines)
+                if teacher:
+
+                    names.append(
+                        teacher
+                    )
+
+            if names:
+
+                if time_range:
+
+                    return (
+                        f"Free faculty on {day} "
+                        f"from {time_range[0]} to "
+                        f"{time_range[1]}: "
+                        + ", ".join(names)
+                    )
+
+                return (
+                    "Free faculty: "
+                    + ", ".join(names)
+                )
+
+            return (
+                f"{len(records)} free faculty records found."
+            )
 
         # -----------------------------------------------------
-        # Subject search
+        # CLASS FREE
+        # -----------------------------------------------------
+
+        if intent == "class_free":
+
+            records = result.get(
+                "results",
+                []
+            )
+
+            if not records:
+
+                return (
+                    "No free classes found."
+                )
+
+            return (
+                f"{len(records)} free class records found."
+            )
+
+        # -----------------------------------------------------
+        # ROOM FREE
+        # -----------------------------------------------------
+
+        if intent == "room_free":
+
+            records = result.get(
+                "results",
+                []
+            )
+
+            if not records:
+
+                return (
+                    "No free rooms found."
+                )
+
+            rooms = []
+
+            for record in records:
+
+                if not isinstance(
+                    record,
+                    dict
+                ):
+                    continue
+
+                room = record.get(
+                    "room"
+                )
+
+                if room:
+
+                    rooms.append(
+                        room
+                    )
+
+            if rooms:
+
+                return (
+                    "Free rooms: "
+                    + ", ".join(rooms)
+                )
+
+            return (
+                f"{len(records)} free room records found."
+            )
+
+        # -----------------------------------------------------
+        # TEACHER SCHEDULE
+        # -----------------------------------------------------
+
+        if intent == "teacher_schedule":
+
+            teacher = result.get(
+                "teacher"
+            )
+
+            records = result.get(
+                "results",
+                []
+            )
+
+            if not records:
+
+                return (
+                    f"No schedule found for {teacher}."
+                )
+
+            return (
+                f"{len(records)} schedule records found "
+                f"for {teacher}."
+            )
+
+        # -----------------------------------------------------
+        # CLASS SCHEDULE
+        # -----------------------------------------------------
+
+        if intent == "class_schedule":
+
+            class_name = result.get(
+                "class_name"
+            )
+
+            records = result.get(
+                "results",
+                []
+            )
+
+            if not records:
+
+                return (
+                    f"No schedule found for "
+                    f"{class_name}."
+                )
+
+            return (
+                f"{len(records)} schedule records found "
+                f"for {class_name}."
+            )
+
+        # -----------------------------------------------------
+        # ROOM STATUS
+        # -----------------------------------------------------
+
+        if intent == "room_status":
+
+            room = result.get(
+                "room"
+            )
+
+            records = result.get(
+                "results",
+                []
+            )
+
+            if not records:
+
+                return (
+                    f"No status information found "
+                    f"for room {room}."
+                )
+
+            return (
+                f"Status information found for room "
+                f"{room}."
+            )
+
+        # -----------------------------------------------------
+        # SUBJECT SEARCH
         # -----------------------------------------------------
 
         if intent == "subject_search":
 
-            teachers = []
+            subject = result.get(
+                "subject"
+            )
 
-            seen = set()
+            records = result.get(
+                "results",
+                []
+            )
 
-            for record in records:
-
-                name = self.normalize_text(
-                    self.field(
-                        record,
-                        "teacher"
-                    )
-                )
-
-                if (
-                    name
-                    and name.lower() not in seen
-                ):
-
-                    seen.add(
-                        name.lower()
-                    )
-
-                    teachers.append(
-                        name
-                    )
-
-            if not teachers:
+            if not records:
 
                 return (
                     f"No faculty found teaching "
                     f"{subject}."
                 )
 
-            return (
-                f"Faculty teaching this subject "
-                f"({len(teachers)}):\n"
-                + "\n".join(
-                    f"- {name}"
-                    for name in teachers
-                )
-            )
-
-        # -----------------------------------------------------
-        # Class schedule
-        # -----------------------------------------------------
-
-        if intent == "class_schedule":
-
-            if not records:
-
-                return (
-                    f"No scheduled events found for "
-                    f"{class_name}"
-                    f"{' on ' + day if day else ''}."
-                )
-
-            lines = [
-                f"Found {len(records)} scheduled event(s):"
-            ]
+            teachers = []
 
             for record in records:
 
-                lines.append(
-                    "- "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "day"
-                        )
-                    )
-                    + " | Slot "
-                    + str(
-                        self.field(
-                            record,
-                            "slot"
-                        )
-                    )
-                    + " | "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "subject"
-                        )
-                    )
-                    + " | Teacher: "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "teacher"
-                        )
-                    )
-                    + " | Room: "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "room"
-                        )
-                    )
-                )
-
-            return "\n".join(lines)
-
-        # -----------------------------------------------------
-        # Room free
-        # -----------------------------------------------------
-
-        if intent == "room_free":
-
-            if not records:
-
-                return (
-                    "No free room found"
-                    f"{' on ' + day if day else ''}"
-                    f"{', slot ' + str(slot) if slot else ''}."
-                )
-
-            rooms = []
-
-            seen = set()
-
-            for record in records:
-
-                value = self.normalize_text(
-                    self.field(
-                        record,
-                        "room"
-                    )
-                )
-
-                if (
-                    value
-                    and value.lower() not in seen
+                if not isinstance(
+                    record,
+                    dict
                 ):
+                    continue
 
-                    seen.add(
-                        value.lower()
+                teacher = record.get(
+                    "teacher"
+                )
+
+                if teacher:
+
+                    teachers.append(
+                        teacher
                     )
 
-                    rooms.append(
-                        value
-                    )
-
-            if not rooms:
+            if teachers:
 
                 return (
-                    f"Found {len(records)} free room slot(s)."
+                    f"Faculty teaching {subject}: "
+                    + ", ".join(teachers)
                 )
 
             return (
-                f"Found {len(rooms)} free room(s):\n"
-                + "\n".join(
-                    f"- {room}"
-                    for room in rooms
-                )
+                f"{len(records)} records found."
             )
-
-        # -----------------------------------------------------
-        # Class free
-        # -----------------------------------------------------
-
-        if intent == "class_free":
-
-            if not records:
-
-                return (
-                    "No free class slot found"
-                    f"{' on ' + day if day else ''}"
-                    f"{', slot ' + str(slot) if slot else ''}."
-                )
-
-            classes = []
-
-            seen = set()
-
-            for record in records:
-
-                value = self.normalize_text(
-                    self.field(
-                        record,
-                        "class_name",
-                        "class"
-                    )
-                )
-
-                if (
-                    value
-                    and value.lower() not in seen
-                ):
-
-                    seen.add(
-                        value.lower()
-                    )
-
-                    classes.append(
-                        value
-                    )
-
-            return (
-                f"Found {len(classes)} free class(es):\n"
-                + "\n".join(
-                    f"- {value}"
-                    for value in classes
-                )
-            )
-
-        # -----------------------------------------------------
-        # Room status
-        # -----------------------------------------------------
-
-        if intent == "room_status":
-
-            if not records:
-
-                return (
-                    f"No schedule found for room {room}"
-                    f"{' on ' + day if day else ''}"
-                    f"{', slot ' + str(slot) if slot else ''}."
-                )
-
-            lines = [
-                f"Found {len(records)} scheduled event(s):"
-            ]
-
-            for record in records:
-
-                lines.append(
-                    "- "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "day"
-                        )
-                    )
-                    + " | Slot "
-                    + str(
-                        self.field(
-                            record,
-                            "slot"
-                        )
-                    )
-                    + " | "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "subject"
-                        )
-                    )
-                    + " | Teacher: "
-                    + self.normalize_text(
-                        self.field(
-                            record,
-                            "teacher"
-                        )
-                    )
-                )
-
-            return "\n".join(lines)
 
         return (
             "Query processed successfully."
         )
-
-
-# =============================================================
-# BACKWARD-COMPATIBILITY ALIAS
-# =============================================================
-
-NLQuery = NaturalLanguageQuery

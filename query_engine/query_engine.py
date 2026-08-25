@@ -1,27 +1,30 @@
 """
-UNISCHED AI - SOURCE-AWARE QUERY ENGINE
+UNISCHED AI - QUERY ENGINE
 
-Faculty availability logic:
+Purpose:
+    Provides a query layer on top of CanonicalEventMatcher.
 
-1. Faculty-wise timetable is the primary source.
-2. Non-empty faculty cell = BUSY.
-3. Empty faculty cell is checked against canonical timetable.
-4. If canonical timetable shows a scheduled event for the same
-   teacher/day/slot, faculty is BUSY.
-5. Missing information = UNKNOWN, never FREE.
+The Query Engine does NOT:
+    - read PDF files
+    - read Excel files
+    - read CSV files
+    - perform data fusion
+    - perform canonical event matching
 
-This prevents incorrectly marking faculty as FREE when the PDF
-table extraction has lost the contents of a merged/complex cell.
+Those responsibilities are handled by the existing project modules.
+
+This module only queries the canonical data.
 """
 
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Any, Dict, List, Optional
-import re
 
 
 class QueryEngine:
+    """
+    Query layer for UNISCHED AI.
+    """
 
     def __init__(self, matcher: Any):
 
@@ -31,8 +34,6 @@ class QueryEngine:
             )
 
         self.matcher = matcher
-
-        self._faculty_source_cache: Optional[str] = None
 
     # =========================================================
     # GENERIC HELPERS
@@ -51,10 +52,10 @@ class QueryEngine:
             .split()
         )
 
-    @classmethod
-    def _normalize(cls, value: Any) -> str:
+    @staticmethod
+    def _normalize(value: Any) -> str:
 
-        return cls._clean(value).casefold()
+        return QueryEngine._clean(value).lower()
 
     @staticmethod
     def _get(
@@ -67,23 +68,24 @@ class QueryEngine:
 
         for key in keys:
 
-            value = record.get(key)
+            if key in record:
 
-            if value is not None:
-                return value
+                value = record[key]
+
+                if value is not None:
+                    return value
 
         return ""
-
-    # =========================================================
-    # DAY
-    # =========================================================
 
     @classmethod
     def _day(cls, value: Any) -> str:
 
+        if not value:
+            return ""
+
         text = cls._normalize(value)
 
-        aliases = {
+        mapping = {
 
             "mo": "monday",
             "mon": "monday",
@@ -96,7 +98,6 @@ class QueryEngine:
 
             "we": "wednesday",
             "wed": "wednesday",
-            "weds": "wednesday",
             "wednesday": "wednesday",
 
             "th": "thursday",
@@ -118,14 +119,10 @@ class QueryEngine:
             "sunday": "sunday",
         }
 
-        return aliases.get(text, text)
-
-    # =========================================================
-    # SLOT
-    # =========================================================
+        return mapping.get(text, text)
 
     @classmethod
-    def _slot(cls, value: Any) -> Optional[int]:
+    def _slot(cls, value: Any) -> Optional[Any]:
 
         if value is None:
             return None
@@ -135,24 +132,18 @@ class QueryEngine:
         if not text:
             return None
 
-        match = re.search(
-            r"(?:slot|period|p)?\s*[-:#]?\s*(\d+)",
-            text,
-            re.IGNORECASE
-        )
-
-        if not match:
-            return None
-
         try:
 
-            return int(
-                match.group(1)
-            )
+            number = float(text)
 
-        except ValueError:
+            if number.is_integer():
+                return int(number)
 
-            return None
+            return number
+
+        except (ValueError, TypeError):
+
+            return text.lower()
 
     @classmethod
     def _same_day(
@@ -180,7 +171,6 @@ class QueryEngine:
     ) -> bool:
 
         value_text = cls._normalize(value)
-
         query_text = cls._normalize(query)
 
         if not value_text or not query_text:
@@ -189,31 +179,11 @@ class QueryEngine:
         return query_text in value_text
 
     # =========================================================
-    # RAW RECORD ACCESS
+    # MATCHER ACCESS
     # =========================================================
 
-    def _raw_records(
-        self
-    ) -> List[Dict[str, Any]]:
-
-        records = getattr(
-            self.matcher,
-            "records",
-            []
-        )
-
-        if records is None:
-            return []
-
-        return [
-            r
-            for r in records
-            if isinstance(r, dict)
-        ]
-
-    def _events(
-        self
-    ) -> List[Dict[str, Any]]:
+    def _events(self) -> List[Dict[str, Any]]:
+        """Get canonical scheduled events."""
 
         try:
 
@@ -231,9 +201,27 @@ class QueryEngine:
                 )
             )
 
-    def _class_free(
-        self
-    ) -> List[Dict[str, Any]]:
+    def _faculty_free(self) -> List[Dict[str, Any]]:
+        """Get faculty free slots."""
+
+        try:
+
+            return list(
+                self.matcher.get_faculty_free_slots()
+            )
+
+        except Exception:
+
+            return list(
+                getattr(
+                    self.matcher,
+                    "faculty_free_slots",
+                    []
+                )
+            )
+
+    def _class_free(self) -> List[Dict[str, Any]]:
+        """Get class free slots."""
 
         try:
 
@@ -251,9 +239,8 @@ class QueryEngine:
                 )
             )
 
-    def _room_free(
-        self
-    ) -> List[Dict[str, Any]]:
+    def _room_free(self) -> List[Dict[str, Any]]:
+        """Get room free slots."""
 
         try:
 
@@ -271,9 +258,8 @@ class QueryEngine:
                 )
             )
 
-    def _contracts(
-        self
-    ) -> List[Dict[str, Any]]:
+    def _contracts(self) -> List[Dict[str, Any]]:
+        """Get contract records."""
 
         try:
 
@@ -292,390 +278,6 @@ class QueryEngine:
             )
 
     # =========================================================
-    # AUTOMATIC FACULTY SOURCE DETECTION
-    # =========================================================
-
-    def _faculty_source(
-        self
-    ) -> Optional[str]:
-
-        if self._faculty_source_cache:
-
-            return self._faculty_source_cache
-
-        source_stats = defaultdict(
-            lambda: {
-                "teacher_day_slot": 0,
-                "teachers": set(),
-                "day_slot": 0,
-            }
-        )
-
-        for record in self._raw_records():
-
-            source = self._clean(
-                record.get("source_file")
-            )
-
-            if not source:
-                continue
-
-            teacher = self._clean(
-                record.get("teacher")
-            )
-
-            day = self._day(
-                record.get("day")
-            )
-
-            slot = self._slot(
-                record.get("slot")
-            )
-
-            if teacher and day and slot is not None:
-
-                source_stats[source][
-                    "teacher_day_slot"
-                ] += 1
-
-                source_stats[source][
-                    "teachers"
-                ].add(
-                    self._normalize(teacher)
-                )
-
-            if day and slot is not None:
-
-                source_stats[source][
-                    "day_slot"
-                ] += 1
-
-        if not source_stats:
-
-            return None
-
-        candidates = []
-
-        for source, stats in source_stats.items():
-
-            candidates.append(
-                (
-                    stats["teacher_day_slot"],
-                    len(stats["teachers"]),
-                    stats["day_slot"],
-                    source,
-                )
-            )
-
-        candidates.sort(
-            reverse=True
-        )
-
-        self._faculty_source_cache = candidates[0][3]
-
-        return self._faculty_source_cache
-
-    # =========================================================
-    # FACULTY RECORDS
-    # =========================================================
-
-    def _faculty_records(
-        self
-    ) -> List[Dict[str, Any]]:
-
-        source = self._faculty_source()
-
-        if not source:
-
-            return []
-
-        return [
-
-            record
-
-            for record in self._raw_records()
-
-            if self._clean(
-                record.get("source_file")
-            ) == source
-
-            and self._clean(
-                record.get("teacher")
-            )
-
-            and self._day(
-                record.get("day")
-            )
-
-            and self._slot(
-                record.get("slot")
-            ) is not None
-        ]
-
-    # =========================================================
-    # CHECK WHETHER FACULTY CELL IS BUSY
-    # =========================================================
-
-    @staticmethod
-    def _cell_is_busy(
-        record: Dict[str, Any]
-    ) -> bool:
-
-        subject = str(
-            record.get("subject") or ""
-        ).strip()
-
-        room = str(
-            record.get("room") or ""
-        ).strip()
-
-        class_name = str(
-            record.get("class_name") or ""
-        ).strip()
-
-        group_name = str(
-            record.get("group_name") or ""
-        ).strip()
-
-        raw_text = str(
-            record.get("raw_text") or ""
-        ).strip()
-
-        return bool(
-            subject
-            or room
-            or class_name
-            or group_name
-            or raw_text
-        )
-
-    # =========================================================
-    # CANONICAL EVENT BUSY CHECK
-    # =========================================================
-
-    def _canonical_busy_events(
-        self,
-        teacher: str,
-        day: str,
-        slot: Any
-    ) -> List[Dict[str, Any]]:
-        """
-        Find scheduled events for the same teacher/day/slot.
-
-        This is the fallback used when PDF extraction has produced
-        an apparently empty faculty cell.
-        """
-
-        teacher_key = self._normalize(
-            teacher
-        )
-
-        day_key = self._day(
-            day
-        )
-
-        slot_key = self._slot(
-            slot
-        )
-
-        if slot_key is None:
-            return []
-
-        matches = []
-
-        for event in self._events():
-
-            event_teacher = self._get(
-                event,
-                "teacher",
-                "faculty"
-            )
-
-            event_day = event.get(
-                "day",
-                ""
-            )
-
-            event_slot = event.get(
-                "slot"
-            )
-
-            if self._normalize(
-                event_teacher
-            ) != teacher_key:
-
-                continue
-
-            if self._day(
-                event_day
-            ) != day_key:
-
-                continue
-
-            if self._slot(
-                event_slot
-            ) != slot_key:
-
-                continue
-
-            # Only count an actual scheduled event.
-            subject = self._clean(
-                event.get("subject")
-            )
-
-            room = self._clean(
-                event.get("room")
-            )
-
-            class_name = self._clean(
-                event.get("class_name")
-            )
-
-            if (
-                subject
-                or room
-                or class_name
-            ):
-
-                matches.append(
-                    event
-                )
-
-        return matches
-
-    # =========================================================
-    # AUTHORITATIVE FACULTY STATUS
-    # =========================================================
-
-    def _faculty_status_record(
-        self,
-        teacher: str,
-        day: str,
-        slot: int
-    ) -> Optional[Dict[str, Any]]:
-
-        teacher_key = self._normalize(
-            teacher
-        )
-
-        day_key = self._day(
-            day
-        )
-
-        slot_key = self._slot(
-            slot
-        )
-
-        if slot_key is None:
-
-            return None
-
-        matches = []
-
-        for record in self._faculty_records():
-
-            if self._normalize(
-                record.get("teacher")
-            ) != teacher_key:
-
-                continue
-
-            if self._day(
-                record.get("day")
-            ) != day_key:
-
-                continue
-
-            if self._slot(
-                record.get("slot")
-            ) != slot_key:
-
-                continue
-
-            matches.append(
-                record
-            )
-
-        if not matches:
-
-            return None
-
-        # -----------------------------------------------------
-        # If any faculty record contains data -> BUSY
-        # -----------------------------------------------------
-
-        for record in matches:
-
-            if self._cell_is_busy(
-                record
-            ):
-
-                return record
-
-        # -----------------------------------------------------
-        # Faculty PDF says EMPTY.
-        #
-        # Before calling it FREE, check canonical timetable.
-        # -----------------------------------------------------
-
-        canonical_events = self._canonical_busy_events(
-            teacher,
-            day,
-            slot
-        )
-
-        if canonical_events:
-
-            record = dict(
-                matches[0]
-            )
-
-            record[
-                "_availability_source"
-            ] = "canonical_timetable"
-
-            record[
-                "_conflicting_events"
-            ] = canonical_events
-
-            return record
-
-        # -----------------------------------------------------
-        # No conflicting canonical event.
-        #
-        # Return empty faculty record.
-        # -----------------------------------------------------
-
-        return matches[0]
-
-    # =========================================================
-    # ALL FACULTY NAMES
-    # =========================================================
-
-    def _all_faculty_names(
-        self
-    ) -> List[str]:
-
-        names = set()
-
-        for record in self._faculty_records():
-
-            teacher = self._clean(
-                record.get("teacher")
-            )
-
-            if teacher:
-
-                names.add(
-                    teacher
-                )
-
-        return sorted(
-            names,
-            key=lambda x: x.casefold()
-        )
-
-    # =========================================================
     # FACULTY FREE SLOTS
     # =========================================================
 
@@ -688,476 +290,122 @@ class QueryEngine:
 
         results = []
 
-        teachers = (
+        for record in self._faculty_free():
 
-            [teacher]
+            record_teacher = self._get(
+                record,
+                "teacher",
+                "faculty"
+            )
 
-            if teacher
+            record_day = self._get(
+                record,
+                "day"
+            )
 
-            else self._all_faculty_names()
-        )
+            record_slot = self._get(
+                record,
+                "slot"
+            )
 
-        day_key = (
+            if teacher:
 
-            self._day(day)
-
-            if day
-
-            else None
-        )
-
-        slot_key = (
-
-            self._slot(slot)
-
-            if slot is not None
-
-            else None
-        )
-
-        for faculty in teachers:
-
-            for record in self._faculty_records():
-
-                record_teacher = self._clean(
-                    record.get("teacher")
-                )
-
-                if self._normalize(
-                    record_teacher
-                ) != self._normalize(
-                    faculty
-                ):
-
-                    continue
-
-                record_day = self._day(
-                    record.get("day")
-                )
-
-                record_slot = self._slot(
-                    record.get("slot")
-                )
-
-                if (
-                    day_key
-                    and record_day != day_key
-                ):
-
-                    continue
-
-                if (
-                    slot_key is not None
-                    and record_slot != slot_key
-                ):
-
-                    continue
-
-                # -------------------------------------------------
-                # First check the faculty cell itself.
-                # -------------------------------------------------
-
-                if self._cell_is_busy(
-                    record
-                ):
-
-                    continue
-
-                # -------------------------------------------------
-                # Empty faculty cell.
-                #
-                # Check canonical timetable before declaring FREE.
-                # -------------------------------------------------
-
-                canonical_events = self._canonical_busy_events(
+                if not self._contains(
                     record_teacher,
-                    record_day,
-                    record_slot
-                )
-
-                if canonical_events:
-
+                    teacher
+                ):
                     continue
 
-                free_record = dict(
-                    record
-                )
+            if day:
 
-                free_record[
-                    "record_type"
-                ] = "FACULTY_FREE_SLOT"
+                if not self._same_day(
+                    record_day,
+                    day
+                ):
+                    continue
 
-                free_record[
-                    "availability_source"
-                ] = "faculty_timetable"
+            if slot is not None:
 
-                results.append(
-                    free_record
-                )
+                if not self._same_slot(
+                    record_slot,
+                    slot
+                ):
+                    continue
+
+            results.append(record)
 
         return {
-
-            "query_type":
-                "faculty_free",
-
-            "teacher":
-                teacher,
-
-            "day":
-                day_key,
-
-            "slot":
-                slot_key,
-
-            "count":
-                len(results),
-
-            "results":
-                results,
+            "query_type": "faculty_free",
+            "teacher": teacher,
+            "day": self._day(day) if day else None,
+            "slot": self._slot(slot),
+            "count": len(results),
+            "results": results,
         }
 
     # =========================================================
-    # TIME CONVERSION
+    # FACULTY STATUS FOR SINGLE SLOT
     # =========================================================
 
-    @staticmethod
-    def _time_to_minutes(
-        value: Any
-    ) -> Optional[int]:
-
-        if value is None:
-
-            return None
-
-        text = str(
-            value
-        ).strip()
-
-        match = re.search(
-            r"(\d{1,2}):(\d{2})",
-            text
-        )
-
-        if not match:
-
-            return None
-
-        return (
-            int(match.group(1)) * 60
-            + int(match.group(2))
-        )
-
-    # =========================================================
-    # SLOT OVERLAP
-    # =========================================================
-
-    @classmethod
-    def _slot_overlaps_period(
-        cls,
-        slot_time: str,
-        start_minutes: int,
-        end_minutes: int
-    ) -> bool:
-
-        match = re.search(
-            r"(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})",
-            str(slot_time)
-        )
-
-        if not match:
-
-            return False
-
-        slot_start = cls._time_to_minutes(
-            match.group(1)
-        )
-
-        slot_end = cls._time_to_minutes(
-            match.group(2)
-        )
-
-        if (
-            slot_start is None
-            or slot_end is None
-        ):
-
-            return False
-
-        return (
-            slot_start < end_minutes
-            and slot_end > start_minutes
-        )
-
-    # =========================================================
-    # FACULTY FREE FOR COMPLETE PERIOD
-    # =========================================================
-
-    def faculty_free_for_period(
+    def faculty_status(
         self,
+        teacher: str,
         day: str,
-        start_time: str,
-        end_time: str
+        slot: Any
     ) -> Dict[str, Any]:
+        """
+        Determine whether a faculty member is busy or free.
+        """
 
-        start = self._time_to_minutes(
-            start_time
+        schedule = self.teacher_schedule(
+            teacher=teacher,
+            day=day,
+            slot=slot
         )
 
-        end = self._time_to_minutes(
-            end_time
-        )
-
-        if start is None or end is None:
+        if schedule["count"] > 0:
 
             return {
-
-                "query_type":
-                    "faculty_free_period",
-
-                "count":
-                    0,
-
-                "results":
-                    [],
-
-                "message":
-                    "Invalid time. Use HH:MM format.",
+                "query_type": "faculty_status",
+                "teacher": teacher,
+                "day": self._day(day),
+                "slot": self._slot(slot),
+                "status": "busy",
+                "is_free": False,
+                "events": schedule["results"],
             }
 
-        if end <= start:
+        free = self.faculty_free_slots(
+            teacher=teacher,
+            day=day,
+            slot=slot
+        )
+
+        if free["count"] > 0:
 
             return {
-
-                "query_type":
-                    "faculty_free_period",
-
-                "count":
-                    0,
-
-                "results":
-                    [],
-
-                "message":
-                    "End time must be later than start time.",
+                "query_type": "faculty_status",
+                "teacher": teacher,
+                "day": self._day(day),
+                "slot": self._slot(slot),
+                "status": "free",
+                "is_free": True,
+                "free_slots": free["results"],
             }
-
-        day_key = self._day(
-            day
-        )
-
-        faculty_records = self._faculty_records()
-
-        # -----------------------------------------------------
-        # Find requested slots.
-        # -----------------------------------------------------
-
-        requested_slots = set()
-
-        slot_times = {}
-
-        for record in faculty_records:
-
-            if self._day(
-                record.get("day")
-            ) != day_key:
-
-                continue
-
-            slot = self._slot(
-                record.get("slot")
-            )
-
-            if slot is None:
-
-                continue
-
-            slot_time = self._clean(
-                record.get("slot_time")
-            )
-
-            if self._slot_overlaps_period(
-                slot_time,
-                start,
-                end
-            ):
-
-                requested_slots.add(
-                    slot
-                )
-
-                slot_times[
-                    slot
-                ] = slot_time
-
-        if not requested_slots:
-
-            return {
-
-                "query_type":
-                    "faculty_free_period",
-
-                "day":
-                    day_key,
-
-                "start_time":
-                    start_time,
-
-                "end_time":
-                    end_time,
-
-                "count":
-                    0,
-
-                "results":
-                    [],
-
-                "message":
-                    "No timetable slots overlap the requested period.",
-            }
-
-        # -----------------------------------------------------
-        # Build faculty -> slot -> record
-        # -----------------------------------------------------
-
-        faculty_slots = defaultdict(
-            dict
-        )
-
-        for record in faculty_records:
-
-            if self._day(
-                record.get("day")
-            ) != day_key:
-
-                continue
-
-            slot = self._slot(
-                record.get("slot")
-            )
-
-            if slot not in requested_slots:
-
-                continue
-
-            teacher = self._clean(
-                record.get("teacher")
-            )
-
-            if not teacher:
-
-                continue
-
-            faculty_slots[
-                teacher
-            ][slot] = record
-
-        # -----------------------------------------------------
-        # Check every teacher.
-        # -----------------------------------------------------
-
-        free_faculty = []
-
-        for teacher, slots in faculty_slots.items():
-
-            is_free = True
-
-            for required_slot in requested_slots:
-
-                record = slots.get(
-                    required_slot
-                )
-
-                # Missing record = UNKNOWN.
-                if record is None:
-
-                    is_free = False
-
-                    break
-
-                # ---------------------------------------------
-                # Direct faculty timetable says BUSY.
-                # ---------------------------------------------
-
-                if self._cell_is_busy(
-                    record
-                ):
-
-                    is_free = False
-
-                    break
-
-                # ---------------------------------------------
-                # Faculty cell is empty.
-                # Check canonical timetable.
-                # ---------------------------------------------
-
-                canonical_events = self._canonical_busy_events(
-                    teacher,
-                    day_key,
-                    required_slot
-                )
-
-                if canonical_events:
-
-                    is_free = False
-
-                    break
-
-            if is_free:
-
-                free_faculty.append(
-                    {
-
-                        "teacher":
-                            teacher,
-
-                        "day":
-                            day_key,
-
-                        "start_time":
-                            start_time,
-
-                        "end_time":
-                            end_time,
-
-                        "slots":
-                            sorted(
-                                requested_slots
-                            ),
-                    }
-                )
-
-        free_faculty.sort(
-            key=lambda x:
-                x["teacher"].casefold()
-        )
 
         return {
-
-            "query_type":
-                "faculty_free_period",
-
-            "day":
-                day_key,
-
-            "start_time":
-                start_time,
-
-            "end_time":
-                end_time,
-
-            "slots":
-                sorted(
-                    requested_slots
-                ),
-
-            "count":
-                len(
-                    free_faculty
-                ),
-
-            "results":
-                free_faculty,
+            "query_type": "faculty_status",
+            "teacher": teacher,
+            "day": self._day(day),
+            "slot": self._slot(slot),
+            "status": "unknown",
+            "is_free": None,
+            "events": [],
+            "free_slots": [],
+            "message": (
+                "No matching scheduled event or explicit "
+                "free-slot record was found."
+            ),
         }
 
     # =========================================================
@@ -1170,224 +418,85 @@ class QueryEngine:
         day: Optional[str] = None,
         slot: Optional[Any] = None
     ) -> Dict[str, Any]:
+        """
+        Return scheduled/busy classes for a teacher.
+
+        IMPORTANT:
+        We separately track whether ANY timetable record exists,
+        including explicit free-slot records.
+
+        This allows the response layer to distinguish:
+
+            1. No timetable data exists
+            2. Timetable data exists but teacher has no classes
+        """
 
         results = []
 
+        has_any_records = False
+
         for record in self._faculty_records():
 
+            record_teacher = self._get(
+                record,
+                "teacher",
+                "faculty"
+            )
+
             if not self._contains(
-                record.get("teacher"),
+                record_teacher,
                 teacher
             ):
-
                 continue
 
-            if (
+            record_day = self._get(
+                record,
+                "day"
+            )
+
+            if day and not self._same_day(
+                record_day,
                 day
-                and not self._same_day(
-                    record.get("day"),
-                    day
-                )
             ):
-
                 continue
+
+            record_slot = self._get(
+                record,
+                "slot"
+            )
 
             if (
                 slot is not None
                 and not self._same_slot(
-                    record.get("slot"),
+                    record_slot,
                     slot
                 )
             ):
-
                 continue
 
-            if self._cell_is_busy(
-                record
-            ):
+            # -------------------------------------------------
+            # IMPORTANT:
+            # Record exists, whether busy OR free.
+            # -------------------------------------------------
 
-                results.append(
-                    record
-                )
+            has_any_records = True
 
-        return {
+            # -------------------------------------------------
+            # Only busy/scheduled records go into results.
+            # -------------------------------------------------
 
-            "query_type":
-                "teacher_schedule",
+            if self._cell_is_busy(record):
 
-            "teacher":
-                teacher,
-
-            "day":
-                self._day(day)
-                if day
-                else None,
-
-            "slot":
-                self._slot(slot),
-
-            "count":
-                len(results),
-
-            "results":
-                results,
-        }
-
-    # =========================================================
-    # FACULTY STATUS
-    # =========================================================
-
-    def faculty_status(
-        self,
-        teacher: str,
-        day: str,
-        slot: Any
-    ) -> Dict[str, Any]:
-
-        slot_key = self._slot(
-            slot
-        )
-
-        record = self._faculty_status_record(
-            teacher,
-            day,
-            slot_key
-        )
-
-        if record is None:
-
-            return {
-
-                "query_type":
-                    "faculty_status",
-
-                "teacher":
-                    teacher,
-
-                "day":
-                    self._day(day),
-
-                "slot":
-                    slot_key,
-
-                "status":
-                    "unknown",
-
-                "is_free":
-                    None,
-
-                "message":
-                    "No faculty timetable record was found.",
-
-                "events":
-                    [],
-            }
-
-        # -----------------------------------------------------
-        # Direct faculty timetable says BUSY.
-        # -----------------------------------------------------
-
-        if self._cell_is_busy(
-            record
-        ):
-
-            return {
-
-                "query_type":
-                    "faculty_status",
-
-                "teacher":
-                    teacher,
-
-                "day":
-                    self._day(day),
-
-                "slot":
-                    slot_key,
-
-                "status":
-                    "busy",
-
-                "is_free":
-                    False,
-
-                "source":
-                    "faculty_timetable",
-
-                "events":
-                    [record],
-            }
-
-        # -----------------------------------------------------
-        # Empty faculty record.
-        #
-        # Check canonical timetable.
-        # -----------------------------------------------------
-
-        canonical_events = self._canonical_busy_events(
-            teacher,
-            day,
-            slot_key
-        )
-
-        if canonical_events:
-
-            return {
-
-                "query_type":
-                    "faculty_status",
-
-                "teacher":
-                    teacher,
-
-                "day":
-                    self._day(day),
-
-                "slot":
-                    slot_key,
-
-                "status":
-                    "busy",
-
-                "is_free":
-                    False,
-
-                "source":
-                    "canonical_timetable_fallback",
-
-                "events":
-                    canonical_events,
-            }
-
-        # -----------------------------------------------------
-        # No activity anywhere -> FREE.
-        # -----------------------------------------------------
+                results.append(record)
 
         return {
-
-            "query_type":
-                "faculty_status",
-
-            "teacher":
-                teacher,
-
-            "day":
-                self._day(day),
-
-            "slot":
-                slot_key,
-
-            "status":
-                "free",
-
-            "is_free":
-                True,
-
-            "source":
-                "faculty_timetable",
-
-            "free_slots":
-                [record],
+            "query_type": "teacher_schedule",
+            "teacher": teacher,
+            "day": self._day(day) if day else None,
+            "slot": self._slot(slot),
+            "count": len(results),
+            "results": results,
+            "has_any_records": has_any_records,
         }
 
     # =========================================================
@@ -1405,66 +514,57 @@ class QueryEngine:
 
         for event in self._events():
 
-            if not self._contains(
-                self._get(
-                    event,
-                    "class_name",
-                    "class"
-                ),
-                class_name
-            ):
-
-                continue
-
-            if (
-                day
-                and not self._same_day(
-                    event.get("day"),
-                    day
-                )
-            ):
-
-                continue
-
-            if (
-                slot is not None
-                and not self._same_slot(
-                    event.get("slot"),
-                    slot
-                )
-            ):
-
-                continue
-
-            results.append(
-                event
+            record_class = self._get(
+                event,
+                "class_name",
+                "class"
             )
 
+            if not self._contains(
+                record_class,
+                class_name
+            ):
+                continue
+
+            record_day = self._get(
+                event,
+                "day"
+            )
+
+            record_slot = self._get(
+                event,
+                "slot"
+            )
+
+            if day:
+
+                if not self._same_day(
+                    record_day,
+                    day
+                ):
+                    continue
+
+            if slot is not None:
+
+                if not self._same_slot(
+                    record_slot,
+                    slot
+                ):
+                    continue
+
+            results.append(event)
+
         return {
-
-            "query_type":
-                "class_schedule",
-
-            "class_name":
-                class_name,
-
-            "day":
-                self._day(day)
-                if day
-                else None,
-
-            "slot":
-                self._slot(slot),
-
-            "count":
-                len(results),
-
-            "results":
-                results,
+            "query_type": "class_schedule",
+            "class_name": class_name,
+            "day": self._day(day) if day else None,
+            "slot": self._slot(slot),
+            "count": len(results),
+            "results": results,
         }
 
     # =========================================================
-    # CLASS FREE
+    # CLASS FREE SLOTS
     # =========================================================
 
     def class_free_slots(
@@ -1478,65 +578,55 @@ class QueryEngine:
 
         for record in self._class_free():
 
-            if (
-                class_name
-                and not self._contains(
-                    self._get(
-                        record,
-                        "class_name",
-                        "class"
-                    ),
-                    class_name
-                )
-            ):
-
-                continue
-
-            if (
-                day
-                and not self._same_day(
-                    record.get("day"),
-                    day
-                )
-            ):
-
-                continue
-
-            if (
-                slot is not None
-                and not self._same_slot(
-                    record.get("slot"),
-                    slot
-                )
-            ):
-
-                continue
-
-            results.append(
-                record
+            record_class = self._get(
+                record,
+                "class_name",
+                "class"
             )
 
+            record_day = self._get(
+                record,
+                "day"
+            )
+
+            record_slot = self._get(
+                record,
+                "slot"
+            )
+
+            if class_name:
+
+                if not self._contains(
+                    record_class,
+                    class_name
+                ):
+                    continue
+
+            if day:
+
+                if not self._same_day(
+                    record_day,
+                    day
+                ):
+                    continue
+
+            if slot is not None:
+
+                if not self._same_slot(
+                    record_slot,
+                    slot
+                ):
+                    continue
+
+            results.append(record)
+
         return {
-
-            "query_type":
-                "class_free",
-
-            "class_name":
-                class_name,
-
-            "day":
-                self._day(day)
-                if day
-                else None,
-
-            "slot":
-                self._slot(slot),
-
-            "count":
-                len(results),
-
-            "results":
-                results,
+            "query_type": "class_free",
+            "class_name": class_name,
+            "day": self._day(day) if day else None,
+            "slot": self._slot(slot),
+            "count": len(results),
+            "results": results,
         }
 
     # =========================================================
@@ -1554,66 +644,57 @@ class QueryEngine:
 
         for event in self._events():
 
-            if not self._contains(
-                self._get(
-                    event,
-                    "room",
-                    "classroom"
-                ),
-                room
-            ):
-
-                continue
-
-            if (
-                day
-                and not self._same_day(
-                    event.get("day"),
-                    day
-                )
-            ):
-
-                continue
-
-            if (
-                slot is not None
-                and not self._same_slot(
-                    event.get("slot"),
-                    slot
-                )
-            ):
-
-                continue
-
-            results.append(
-                event
+            record_room = self._get(
+                event,
+                "room",
+                "classroom"
             )
 
+            if not self._contains(
+                record_room,
+                room
+            ):
+                continue
+
+            record_day = self._get(
+                event,
+                "day"
+            )
+
+            record_slot = self._get(
+                event,
+                "slot"
+            )
+
+            if day:
+
+                if not self._same_day(
+                    record_day,
+                    day
+                ):
+                    continue
+
+            if slot is not None:
+
+                if not self._same_slot(
+                    record_slot,
+                    slot
+                ):
+                    continue
+
+            results.append(event)
+
         return {
-
-            "query_type":
-                "room_schedule",
-
-            "room":
-                room,
-
-            "day":
-                self._day(day)
-                if day
-                else None,
-
-            "slot":
-                self._slot(slot),
-
-            "count":
-                len(results),
-
-            "results":
-                results,
+            "query_type": "room_schedule",
+            "room": room,
+            "day": self._day(day) if day else None,
+            "slot": self._slot(slot),
+            "count": len(results),
+            "results": results,
         }
 
     # =========================================================
-    # ROOM FREE
+    # ROOM FREE SLOTS
     # =========================================================
 
     def room_free_slots(
@@ -1627,65 +708,55 @@ class QueryEngine:
 
         for record in self._room_free():
 
-            if (
-                room
-                and not self._contains(
-                    self._get(
-                        record,
-                        "room",
-                        "classroom"
-                    ),
-                    room
-                )
-            ):
-
-                continue
-
-            if (
-                day
-                and not self._same_day(
-                    record.get("day"),
-                    day
-                )
-            ):
-
-                continue
-
-            if (
-                slot is not None
-                and not self._same_slot(
-                    record.get("slot"),
-                    slot
-                )
-            ):
-
-                continue
-
-            results.append(
-                record
+            record_room = self._get(
+                record,
+                "room",
+                "classroom"
             )
 
+            record_day = self._get(
+                record,
+                "day"
+            )
+
+            record_slot = self._get(
+                record,
+                "slot"
+            )
+
+            if room:
+
+                if not self._contains(
+                    record_room,
+                    room
+                ):
+                    continue
+
+            if day:
+
+                if not self._same_day(
+                    record_day,
+                    day
+                ):
+                    continue
+
+            if slot is not None:
+
+                if not self._same_slot(
+                    record_slot,
+                    slot
+                ):
+                    continue
+
+            results.append(record)
+
         return {
-
-            "query_type":
-                "room_free",
-
-            "room":
-                room,
-
-            "day":
-                self._day(day)
-                if day
-                else None,
-
-            "slot":
-                self._slot(slot),
-
-            "count":
-                len(results),
-
-            "results":
-                results,
+            "query_type": "room_free",
+            "room": room,
+            "day": self._day(day) if day else None,
+            "slot": self._slot(slot),
+            "count": len(results),
+            "results": results,
         }
 
     # =========================================================
@@ -1701,39 +772,37 @@ class QueryEngine:
 
         for event in self._events():
 
+            record_subject = self._get(
+                event,
+                "subject"
+            )
+
             if self._contains(
-                event.get("subject"),
+                record_subject,
                 subject
             ):
 
-                results.append(
-                    event
-                )
+                results.append(event)
 
         for record in self._contracts():
 
+            record_subject = self._get(
+                record,
+                "subject"
+            )
+
             if self._contains(
-                record.get("subject"),
+                record_subject,
                 subject
             ):
 
-                results.append(
-                    record
-                )
+                results.append(record)
 
         return {
-
-            "query_type":
-                "subject_search",
-
-            "subject":
-                subject,
-
-            "count":
-                len(results),
-
-            "results":
-                results,
+            "query_type": "subject_search",
+            "subject": subject,
+            "count": len(results),
+            "results": results,
         }
 
     # =========================================================
@@ -1749,47 +818,39 @@ class QueryEngine:
 
         for event in self._events():
 
+            record_teacher = self._get(
+                event,
+                "teacher",
+                "faculty"
+            )
+
             if self._contains(
-                self._get(
-                    event,
-                    "teacher",
-                    "faculty"
-                ),
+                record_teacher,
                 teacher
             ):
 
-                results.append(
-                    event
-                )
+                results.append(event)
 
         for record in self._contracts():
 
+            record_teacher = self._get(
+                record,
+                "teacher",
+                "faculty"
+            )
+
             if self._contains(
-                self._get(
-                    record,
-                    "teacher",
-                    "faculty"
-                ),
+                record_teacher,
                 teacher
             ):
 
-                results.append(
-                    record
-                )
+                results.append(record)
 
         return {
-
-            "query_type":
-                "teacher_search",
-
-            "teacher":
-                teacher,
-
-            "count":
-                len(results),
-
-            "results":
-                results,
+            "query_type": "teacher_search",
+            "teacher": teacher,
+            "count": len(results),
+            "results": results,
         }
 
     # =========================================================
@@ -1801,9 +862,7 @@ class QueryEngine:
         text: str
     ) -> Dict[str, Any]:
 
-        query = self._normalize(
-            text
-        )
+        query = self._normalize(text)
 
         results = []
 
@@ -1811,111 +870,621 @@ class QueryEngine:
 
             fields = [
 
-                event.get(
-                    "teacher",
-                    ""
+                self._get(
+                    event,
+                    "teacher"
                 ),
 
-                event.get(
-                    "subject",
-                    ""
+                self._get(
+                    event,
+                    "subject"
                 ),
 
-                event.get(
-                    "room",
-                    ""
+                self._get(
+                    event,
+                    "room"
                 ),
 
-                event.get(
+                self._get(
+                    event,
                     "class_name",
-                    ""
+                    "class"
                 ),
 
-                event.get(
-                    "day",
-                    ""
+                self._get(
+                    event,
+                    "day"
                 ),
 
-                event.get(
-                    "slot",
-                    ""
+                self._get(
+                    event,
+                    "slot"
                 ),
             ]
 
             combined = " ".join(
-                self._normalize(
-                    field
-                )
+                self._normalize(field)
                 for field in fields
             )
 
-            if (
-                query
-                and query in combined
-            ):
+            if query in combined:
 
-                results.append(
-                    event
-                )
+                results.append(event)
 
         return {
-
-            "query_type":
-                "search",
-
-            "query":
-                text,
-
-            "count":
-                len(results),
-
-            "results":
-                results,
+            "query_type": "search",
+            "query": text,
+            "count": len(results),
+            "results": results,
         }
 
     # =========================================================
-    # SUMMARY
+    # DATASET SUMMARY
     # =========================================================
 
-    def summary(
-        self
-    ) -> Dict[str, Any]:
+    def summary(self) -> Dict[str, Any]:
 
         events = self._events()
 
-        faculty_free = self.faculty_free_slots()
+        faculty_free = self._faculty_free()
+
+        class_free = self._class_free()
+
+        room_free = self._room_free()
+
+        contracts = self._contracts()
 
         return {
-
-            "canonical_events":
-                len(events),
-
-            "faculty_free_slots":
-                faculty_free["count"],
-
-            "class_free_slots":
-                len(
-                    self._class_free()
-                ),
-
-            "room_free_slots":
-                len(
-                    self._room_free()
-                ),
-
-            "contract_records":
-                len(
-                    self._contracts()
-                ),
-
-            "faculty_source":
-                self._faculty_source(),
-
-            "faculty_records":
-                len(
-                    self._faculty_records()
-                ),
+            "canonical_events": len(events),
+            "faculty_free_slots": len(faculty_free),
+            "class_free_slots": len(class_free),
+            "room_free_slots": len(room_free),
+            "contract_records": len(contracts),
         }
+
+
+# =============================================================
+# IMPORTANT HELPER METHODS
+# =============================================================
+
+def _faculty_records(self) -> List[Dict[str, Any]]:
+    """
+    Return all faculty timetable records.
+
+    This combines:
+        - scheduled events
+        - explicit faculty free-slot records
+
+    The faculty free-slot records are required for questions such as:
+
+        Is Mr. Nitin Goyal free on Monday slot 2?
+
+    and:
+
+        What is Mr. Nitin Goyal's schedule on Monday?
+    """
+
+    records = []
+
+    # Scheduled/busy events
+    for event in self._events():
+
+        if isinstance(event, dict):
+
+            teacher = self._get(
+                event,
+                "teacher",
+                "faculty"
+            )
+
+            if teacher:
+                records.append(event)
+
+    # Explicit free-slot records
+    for record in self._faculty_free():
+
+        if isinstance(record, dict):
+
+            teacher = self._get(
+                record,
+                "teacher",
+                "faculty"
+            )
+
+            if teacher:
+                records.append(record)
+
+    return records
+
+
+def _cell_is_busy(self, record: Dict[str, Any]) -> bool:
+    """
+    Determine whether a timetable record represents a busy class.
+
+    Explicit faculty-free records are never busy.
+    """
+
+    if not isinstance(record, dict):
+        return False
+
+    record_type = self._normalize(
+        record.get("record_type", "")
+    )
+
+    if "faculty_free_slot" in record_type:
+        return False
+
+    # Explicit free indicators
+    for key in (
+        "is_free",
+        "free",
+        "available"
+    ):
+
+        if key in record:
+
+            value = record.get(key)
+
+            if isinstance(value, bool):
+
+                if value:
+                    return False
+
+    # Check common fields
+    subject = self._clean(
+        record.get("subject", "")
+    )
+
+    room = self._clean(
+        record.get("room", "")
+    )
+
+    class_name = self._clean(
+        record.get("class_name", "")
+    )
+
+    group_name = self._clean(
+        record.get("group_name", "")
+    )
+
+    lecture_type = self._clean(
+        record.get("type", "")
+    )
+
+    # If the record is explicitly marked free
+    combined = " ".join(
+        [
+            subject,
+            room,
+            class_name,
+            group_name,
+            lecture_type,
+            record_type,
+        ]
+    ).lower()
+
+    free_words = (
+        "free",
+        "available",
+        "faculty_free_slot",
+    )
+
+    if any(word in combined for word in free_words):
+
+        if "faculty_free_slot" in record_type:
+            return False
+
+        if subject == "" and room == "" and class_name == "":
+            return False
+
+    # A normal canonical event is considered busy.
+    return True
+
+
+def _time_to_minutes(
+    self,
+    value: Any
+) -> Optional[int]:
+    """
+    Convert HH:MM time to minutes.
+    """
+
+    if value is None:
+        return None
+
+    text = self._clean(value)
+
+    if not text:
+        return None
+
+    try:
+
+        parts = text.split(":")
+
+        if len(parts) != 2:
+            return None
+
+        hour = int(parts[0])
+
+        minute = int(parts[1])
+
+        if not (
+            0 <= hour <= 23
+            and 0 <= minute <= 59
+        ):
+            return None
+
+        return hour * 60 + minute
+
+    except (
+        ValueError,
+        TypeError
+    ):
+
+        return None
+
+
+def _slot_overlaps_period(
+    self,
+    slot_time: Any,
+    start: int,
+    end: int
+) -> bool:
+    """
+    Determine whether a timetable slot overlaps
+    the requested time range.
+    """
+
+    if not slot_time:
+        return False
+
+    text = self._clean(slot_time)
+
+    # Expected:
+    # 09:15 - 10:15
+    parts = text.split("-")
+
+    if len(parts) != 2:
+        return False
+
+    slot_start = self._time_to_minutes(
+        parts[0].strip()
+    )
+
+    slot_end = self._time_to_minutes(
+        parts[1].strip()
+    )
+
+    if (
+        slot_start is None
+        or slot_end is None
+    ):
+        return False
+
+    return (
+        slot_start < end
+        and slot_end > start
+    )
+
+
+def faculty_status_for_period(
+    self,
+    teacher: str,
+    day: str,
+    start_time: str,
+    end_time: str
+) -> Dict[str, Any]:
+    """
+    Return the status of one faculty member
+    for a complete time range.
+
+    Example:
+
+        Mr. Nitin Goyal
+        Monday
+        09:15
+        11:15
+
+    returns slots 2 and 3 if both overlap
+    the requested period.
+    """
+
+    start = self._time_to_minutes(
+        start_time
+    )
+
+    end = self._time_to_minutes(
+        end_time
+    )
+
+    if (
+        start is None
+        or end is None
+        or end <= start
+    ):
+
+        return {
+            "query_type": "faculty_status_period",
+            "teacher": teacher,
+            "day": self._day(day),
+            "start_time": start_time,
+            "end_time": end_time,
+            "status": "unknown",
+            "is_free": None,
+            "slots": [],
+            "events": [],
+            "message": "Invalid time range."
+        }
+
+    day_key = self._day(day)
+
+    matching = []
+
+    for record in self._faculty_records():
+
+        if self._normalize(
+            self._get(
+                record,
+                "teacher",
+                "faculty"
+            )
+        ) != self._normalize(
+            teacher
+        ):
+
+            continue
+
+        if self._day(
+            record.get("day")
+        ) != day_key:
+
+            continue
+
+        if not self._slot_overlaps_period(
+            self._clean(
+                record.get("slot_time")
+            ),
+            start,
+            end
+        ):
+
+            continue
+
+        matching.append(record)
+
+    matching.sort(
+        key=lambda r: (
+            self._slot(
+                r.get("slot")
+            ) or 999
+        )
+    )
+
+    if not matching:
+
+        return {
+            "query_type": "faculty_status_period",
+            "teacher": teacher,
+            "day": day_key,
+            "start_time": start_time,
+            "end_time": end_time,
+            "status": "unknown",
+            "is_free": None,
+            "slots": [],
+            "events": [],
+            "message": (
+                "No faculty timetable records overlap "
+                "the requested period."
+            )
+        }
+
+    busy = [
+        r
+        for r in matching
+        if self._cell_is_busy(r)
+    ]
+
+    return {
+        "query_type": "faculty_status_period",
+        "teacher": teacher,
+        "day": day_key,
+        "start_time": start_time,
+        "end_time": end_time,
+
+        "status": (
+            "busy"
+            if busy
+            else "free"
+        ),
+
+        "is_free": not busy,
+
+        "slots": [
+            self._slot(
+                r.get("slot")
+            )
+            for r in matching
+            if self._slot(
+                r.get("slot")
+            ) is not None
+        ],
+
+        "events": busy,
+
+        "records": matching,
+    }
+
+
+def faculty_free_for_period(
+    self,
+    day: str,
+    start_time: str,
+    end_time: str
+) -> Dict[str, Any]:
+    """
+    Return all faculty members who are completely free
+    during the requested time range.
+    """
+
+    start = self._time_to_minutes(
+        start_time
+    )
+
+    end = self._time_to_minutes(
+        end_time
+    )
+
+    day_key = self._day(day)
+
+    if (
+        start is None
+        or end is None
+        or end <= start
+    ):
+
+        return {
+            "query_type": "faculty_free_period",
+            "day": day_key,
+            "start_time": start_time,
+            "end_time": end_time,
+            "slots": [],
+            "count": 0,
+            "results": []
+        }
+
+    all_records = self._faculty_records()
+
+    teachers = sorted(
+        {
+            self._clean(
+                self._get(
+                    record,
+                    "teacher",
+                    "faculty"
+                )
+            )
+
+            for record in all_records
+
+            if self._clean(
+                self._get(
+                    record,
+                    "teacher",
+                    "faculty"
+                )
+            )
+        },
+        key=lambda x: x.casefold()
+    )
+
+    # Determine slots in the requested range
+    requested_records = [
+        record
+
+        for record in all_records
+
+        if self._day(
+            record.get("day")
+        ) == day_key
+
+        and self._slot_overlaps_period(
+            self._clean(
+                record.get("slot_time")
+            ),
+            start,
+            end
+        )
+    ]
+
+    requested_slots = sorted(
+        {
+            self._slot(
+                record.get("slot")
+            )
+
+            for record in requested_records
+
+            if self._slot(
+                record.get("slot")
+            ) is not None
+        }
+    )
+
+    free_faculty = []
+
+    for teacher in teachers:
+
+        matching = [
+
+            record
+
+            for record in requested_records
+
+            if self._normalize(
+                self._get(
+                    record,
+                    "teacher",
+                    "faculty"
+                )
+            ) == self._normalize(
+                teacher
+            )
+        ]
+
+        # No records for this teacher in requested period
+        if not matching:
+            continue
+
+        is_free = True
+
+        for record in matching:
+
+            if self._cell_is_busy(record):
+
+                is_free = False
+
+                break
+
+        if is_free:
+
+            free_faculty.append(
+                {
+                    "teacher": teacher,
+                    "day": day_key,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "slots": requested_slots,
+                }
+            )
+
+    free_faculty.sort(
+        key=lambda x: x["teacher"].casefold()
+    )
+
+    return {
+        "query_type": "faculty_free_period",
+        "day": day_key,
+        "start_time": start_time,
+        "end_time": end_time,
+        "slots": requested_slots,
+        "count": len(free_faculty),
+        "results": free_faculty,
+    }
+
+
+# =============================================================
+# ATTACH METHODS TO QUERY ENGINE
+#
+# These assignments guarantee that the methods above become
+# actual QueryEngine methods.
+# =============================================================
+
+QueryEngine._faculty_records = _faculty_records
+QueryEngine._cell_is_busy = _cell_is_busy
+QueryEngine._time_to_minutes = _time_to_minutes
+QueryEngine._slot_overlaps_period = _slot_overlaps_period
+QueryEngine.faculty_status_for_period = faculty_status_for_period
+QueryEngine.faculty_free_for_period = faculty_free_for_period
 
 
 __all__ = [

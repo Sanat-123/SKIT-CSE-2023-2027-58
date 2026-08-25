@@ -1,3 +1,6 @@
+
+
+
 import re
 from datetime import datetime
 
@@ -386,12 +389,31 @@ class FacultyAIChatbot:
 
         return None
 
+    def _extract_period_teacher(self, query):
+        """Resolve a specific faculty name from a period query to the canonical stored name."""
+        text = str(query).lower()
+        try:
+            names = self.query_engine._all_faculty_names()
+        except Exception:
+            names = []
+
+        for name in sorted(names, key=len, reverse=True):
+            key = self.query_engine._teacher_key(name)
+            if not key:
+                continue
+            # Compare the title-insensitive name against the query.
+            query_key = re.sub(r"\b(?:dr|mr|mrs|ms|prof|professor)\.?\s*", "", text)
+            query_key = re.sub(r"\s+", " ", query_key).strip()
+            if re.search(r"(?<![a-z])" + re.escape(key) + r"(?![a-z])", query_key):
+                return name
+        return None
+
     # ======================================================
     # PERIOD QUERY DETECTION
     # ======================================================
 
-    @staticmethod
-    def _is_faculty_period_query(query):
+    
+    def _is_faculty_period_query(self,query):
 
         """
         Detect whether the user is asking for faculty
@@ -433,9 +455,17 @@ class FacultyAIChatbot:
             for word in availability_words
         )
 
+        has_time_range = bool(
+            self._extract_time_range(query)[0]
+            and self._extract_time_range(query)[1]
+        )
+
+        has_specific_teacher = self._extract_period_teacher(query) is not None
+
         return (
-            has_faculty_reference
-            and has_availability
+            has_availability
+            and has_time_range
+            and (has_faculty_reference or has_specific_teacher)
         )
 
     # ======================================================
@@ -447,10 +477,6 @@ class FacultyAIChatbot:
         """
         Handle natural-language faculty availability
         queries containing a start and end time.
-
-        This method deliberately uses the existing
-        QueryEngine period function rather than duplicating
-        timetable logic.
         """
 
         day = self._extract_day(query)
@@ -458,6 +484,12 @@ class FacultyAIChatbot:
         start_time, end_time = (
             self._extract_time_range(query)
         )
+
+    # --------------------------------------------------
+        # Extract specific faculty, if mentioned
+        # --------------------------------------------------
+
+        teacher = self._extract_period_teacher(query)
 
         # --------------------------------------------------
         # Missing day
@@ -509,6 +541,42 @@ class FacultyAIChatbot:
             return (
                 "I could not understand the requested "
                 "time range."
+            )
+
+        # --------------------------------------------------
+        # SPECIFIC FACULTY PERIOD STATUS
+        # --------------------------------------------------
+        if teacher:
+            result = self.query_engine.faculty_status_for_period(
+                teacher, day, start_time, end_time
+            )
+
+            status = result.get("status")
+            if status == "free":
+                slots = result.get("slots", [])
+                slot_text = ", ".join(str(x) for x in slots)
+                return (
+                    f"{teacher} is FREE on {day} from "
+                    f"{start_time} to {end_time}."
+                    + (f"\nOverlapping slots: {slot_text}" if slot_text else "")
+                )
+
+            if status == "busy":
+                busy_slots = [
+                    self.query_engine._slot(x.get("slot"))
+                    for x in result.get("events", [])
+                    if self.query_engine._slot(x.get("slot")) is not None
+                ]
+                slot_text = ", ".join(str(x) for x in busy_slots)
+                return (
+                    f"{teacher} is BUSY on {day} from "
+                    f"{start_time} to {end_time}."
+                    + (f"\nBusy slots: {slot_text}" if slot_text else "")
+                )
+
+            return (
+                f"I could not determine the availability of {teacher} "
+                f"on {day} from {start_time} to {end_time}."
             )
 
         # --------------------------------------------------
