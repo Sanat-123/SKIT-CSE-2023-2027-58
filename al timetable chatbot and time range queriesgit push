@@ -1,0 +1,218 @@
+[1mdiff --git a/app.py b/app.py[m
+[1mindex b7c64c5..2fc4d04 100644[m
+[1m--- a/app.py[m
+[1m+++ b/app.py[m
+[36m@@ -3,19 +3,20 @@[m
+ UNISCHED AI - UNIVERSAL FREE SLOT CHATBOT[m
+ ============================================================[m
+ [m
+[31m-User uploads:[m
+[32m+[m[32mUser uploads one or more timetable files:[m
+     PDF[m
+     XLSX[m
+     XLS[m
+     CSV[m
+ [m
+ The application:[m
+[31m-    1. Imports the file[m
+[31m-    2. Detects the timetable structure[m
+[31m-    3. Creates canonical records[m
+[31m-    4. Builds the availability engine[m
+[31m-    5. Accepts natural-language questions[m
+[31m-    6. Returns timetable/free-slot answers[m
+[32m+[m[32m    1. Imports every uploaded file[m
+[32m+[m[32m    2. Detects each file's timetable structure[m
+[32m+[m[32m    3. Combines all imported records into one dataset[m
+[32m+[m[32m    4. Creates canonical records from the combined dataset[m
+[32m+[m[32m    5. Builds ONE availability engine over that dataset[m
+[32m+[m[32m    6. Accepts natural-language questions[m
+[32m+[m[32m    7. Returns timetable/free-slot answers[m
+ [m
+ ============================================================[m
+ """[m
+[36m@@ -81,8 +82,8 @@[m [mst.subheader([m
+ )[m
+ [m
+ st.write([m
+[31m-    "Upload a timetable PDF, Excel or CSV file and ask "[m
+[31m-    "questions in natural language."[m
+[32m+[m[32m    "Upload one or more timetable PDF, Excel or CSV files "[m
+[32m+[m[32m    "and ask questions in natural language."[m
+ )[m
+ [m
+ [m
+[36m@@ -114,8 +115,8 @@[m [mif "engine" not in st.session_state:[m
+ if "nlp" not in st.session_state:[m
+     st.session_state.nlp = None[m
+ [m
+[31m-if "file_name" not in st.session_state:[m
+[31m-    st.session_state.file_name = ""[m
+[32m+[m[32mif "file_names" not in st.session_state:[m
+[32m+[m[32m    st.session_state.file_names = [][m
+ [m
+ if "messages" not in st.session_state:[m
+     st.session_state.messages = [][m
+[36m@@ -129,9 +130,10 @@[m [mwith st.sidebar:[m
+ [m
+     st.header("📁 Timetable Upload")[m
+ [m
+[31m-    uploaded_file = st.file_uploader([m
+[31m-        "Upload timetable",[m
+[31m-        type=SUPPORTED_TYPES[m
+[32m+[m[32m    uploaded_files = st.file_uploader([m
+[32m+[m[32m        "Upload timetable(s)",[m
+[32m+[m[32m        type=SUPPORTED_TYPES,[m
+[32m+[m[32m        accept_multiple_files=True[m
+     )[m
+ [m
+     st.markdown("---")[m
+[36m@@ -162,11 +164,17 @@[m [mwith st.sidebar:[m
+ # FILE PROCESSING FUNCTION[m
+ # ============================================================[m
+ [m
+[31m-def process_uploaded_file(uploaded_file):[m
+[32m+[m[32mdef import_single_file(uploaded_file):[m
+ [m
+     """[m
+[31m-    Save uploaded Streamlit file temporarily and process it[m
+[32m+[m[32m    Save ONE uploaded Streamlit file temporarily and import it[m
+     through the existing ImportManager.[m
+[32m+[m
+[32m+[m[32m    This function only performs the IMPORT step for a single[m
+[32m+[m[32m    file. It deliberately does NOT build a CanonicalEventMatcher[m
+[32m+[m[32m    or QueryEngine -- that happens once, after every uploaded[m
+[32m+[m[32m    file's records have been combined (see[m
+[32m+[m[32m    build_combined_dataset() below).[m
+     """[m
+ [m
+     suffix = Path([m
+[36m@@ -221,7 +229,8 @@[m [mdef process_uploaded_file(uploaded_file):[m
+                         "error",[m
+                         "File import failed."[m
+                     ),[m
+[31m-                    "records": [][m
+[32m+[m[32m                    "records": [],[m
+[32m+[m[32m                    "warnings": [][m
+                 }[m
+ [m
+             records = result.get([m
+[36m@@ -253,40 +262,13 @@[m [mdef process_uploaded_file(uploaded_file):[m
+                     "The file was imported but "[m
+                     "no timetable records were found."[m
+                 ),[m
+[31m-                "records": [][m
+[32m+[m[32m                "records": [],[m
+[32m+[m[32m                "warnings": warnings[m
+             }[m
+ [m
+[31m-[m
+[31m-        # ----------------------------------------------------[m
+[31m-        # Canonical matching[m
+[31m-        # ----------------------------------------------------[m
+[31m-[m
+[31m-        matcher = CanonicalEventMatcher([m
+[31m-            records[m
+[31m-        )[m
+[31m-[m
+[31m-        matcher.match()[m
+[31m-[m
+[31m-[m
+[31m-        # ----------------------------------------------------[m
+[31m-        # Query engine[m
+[31m-        # ----------------------------------------------------[m
+[31m-[m
+[31m-        engine = QueryEngine([m
+[31m-            matcher[m
+[31m-        )[m
+[31m-[m
+[31m-        nlp = NaturalLanguageQuery([m
+[31m-            engine[m
+[31m-        )[m
+[31m-[m
+[31m-[m
+         return {[m
+             "success": True,[m
+             "records": records,[m
+[31m-            "matcher": matcher,[m
+[31m-            "engine": engine,[m
+[31m-            "nlp": nlp,[m
+             "warnings": warnings[m
+         }[m
+ [m
+[36m@@ -296,7 +278,8 @@[m [mdef process_uploaded_file(uploaded_file):[m
+         return {[m
+             "success": False,[m
+             "message": str(e),[m
+[31m-            "records": [][m
+[32m+[m[32m            "records": [],[m
+[32m+[m[32m            "warnings": [][m
+         }[m
+ [m
+ [m
+[36m@@ -316,23 +299,151 @@[m [mdef process_uploaded_file(uploaded_file):[m
+                 pass[m
+ [m
+ [m
+[32m+[m[32m# ============================================================[m
+[32m+[m[32m# COMBINE MULTIPLE UPLOADED FILES INTO ONE DATASET[m
+[32m+[m[32m# ============================================================[m
+[32m+[m
+[32m+[m[32mdef build_combined_dataset(uploaded_files):[m
+[32m+[m
+[32m+[m[32m    """[m
+[32m+[m[32m    Import EVERY uploaded file, combine all of their records[m
+[32m+[m[32m    into a single list, and build exactly ONE[m
+[32m+[m[32m    CanonicalEventMatcher / QueryEngine / NaturalLanguageQuery[m
+[32m+[m[32m    over that combined list.[m
+[32m+[m
+[32m+[m[32m    A single uploaded file is simply the special case of this[m
+[32m+[m[32m    same code path with one file in the list -- there is no[m
+[32m+[m[32m    separate single-file pipeline.[m
+[32m+[m[32m    """[m
+[32m+[m
+[32m+[m[32m    all_records = [][m
+[32m+[m
+[32m+[m[32m    all_warnings = [][m
+[32m+[m
+[32m+[m[32m    file_reports = [][m
+[32m+[m
+[32m+[m[32m    for uploaded_file in uploaded_files:[m
+[32m+[m
+[32m+[m[32m        file_result = import_single_file([m
+[32m+[m[32m            uploaded_file[m
+[32m+[m[32m        )[m
+[32m+[m
+[32m+[m[32m        if file_result["success"]:[m
+[32m+[m
+[32m+[m[32m            all_records.extend([m
+[32m+[m[32m                file_result["records"][m
+[32m+[m[32m            )[m
+[32m+[m
+[32m+[m[32m            file_reports.append([m
+[32m+[m[32m                {[m
+[32m+[m[32m                    "name": uploaded_file.name,[m
+[32m+[m[32m                    "success": True,[m
+[32m+[m[32m                    "record_count": len([m
+[32m+[m[32m                        file_result["records"][m
+[32m+[m[32m                    ),[m
+[32m+[m[32m                }[m
+[32m+[m[32m            )[m
+[32m+[m
+[32m+[m[32m            for warning in file_result.get([m
+[32m+[m[32m                "warnings",[m
+[32m+[m[32m                [][m
+[32m+[m[32m            ):[m
+[32m+[m
+[32m+[m[32m                all_warnings.append([m
+[32m+[m[32m                    f"{uploaded_file.name}: {warning}"[m
+[32m+[m[32m                )[m
+[32m+[m
+[32m+[m[32m        else:[m
+[32m+[m
+[32m+[m[32m            file_reports.append([m
+[32m+[m[32m                {[m
+[32m+[m[32m                    "name": uploaded_file.name,[m
+[32m+[m[32m                    "success": False,[m
+[32m+[m[32m                    "message": file_result.get([m
+[32m+[m[32m                        "message",[m
+[32m+[m[32m                        "Unknown 
