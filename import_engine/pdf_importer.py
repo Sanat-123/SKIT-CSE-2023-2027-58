@@ -7,9 +7,6 @@ IMPORTANT:
 - Preserves EMPTY timetable cells.
 - Empty faculty cell = FREE.
 - Non-empty faculty cell = BUSY.
-- Handles merged timetable cells correctly.
-- pdfplumber None continuation cells are treated as part of
-  the previous timetable event.
 - Automatically extracts teacher name.
 - Automatically extracts day, slot and slot time.
 - Does NOT hard-code teacher names.
@@ -20,7 +17,7 @@ IMPORTANT:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import re
 
 import pdfplumber
@@ -143,7 +140,7 @@ class PDFImporter:
         }
 
     # ==========================================================
-    # TEACHER EXTRACTION FROM TEXT
+    # TEACHER EXTRACTION
     # ==========================================================
 
     @classmethod
@@ -154,6 +151,13 @@ class PDFImporter:
 
         if not text:
             return ""
+
+        # ------------------------------------------------------
+        # Normal case:
+        #
+        # Teacher Ms.Archika Jain
+        # Teacher Dr. Aakriti Sharma
+        # ------------------------------------------------------
 
         patterns = [
 
@@ -182,6 +186,7 @@ class PDFImporter:
                     match.group(1)
                 )
 
+                # Remove accidental timetable information
                 teacher = re.sub(
                     r"\s+1\s+2\s+3\s+4\s+5\s+6\s+7\s+8.*$",
                     "",
@@ -233,7 +238,6 @@ class PDFImporter:
             )
 
         except Exception:
-
             words = []
 
         if not words:
@@ -242,24 +246,15 @@ class PDFImporter:
         words = sorted(
             words,
             key=lambda x: (
-                round(
-                    x.get("top", 0),
-                    1
-                ),
-                x.get(
-                    "x0",
-                    0
-                )
+                round(x.get("top", 0), 1),
+                x.get("x0", 0)
             )
         )
 
         for index, word in enumerate(words):
 
             value = cls.clean_text(
-                word.get(
-                    "text",
-                    ""
-                )
+                word.get("text", "")
             )
 
             if value.lower() != "teacher":
@@ -309,8 +304,140 @@ class PDFImporter:
         return ""
 
     # ==========================================================
-    # DAY DETECTION
+    # GENERIC PAGE LABEL DETECTION (structure-based)
+    #
+    # Facultywise pages identify themselves with a "Teacher ..."
+    # / "Faculty ..." line (handled above). Classwise and
+    # location-wise pages instead identify themselves with a
+    # bare code (e.g. "3CSA." or "403.") on the line immediately
+    # before the numbered slot-header row ("1 2 3 4 5 6 7 8...").
+    #
+    # This looks for that structural position -- the line right
+    # before the slot header -- rather than any specific value,
+    # so it works regardless of institution name, class-naming
+    # convention, or room-numbering scheme.
     # ==========================================================
+
+    @staticmethod
+    def _is_sequential_slot_header_line(line: str) -> bool:
+
+        parts = line.strip().split()
+
+        # A real slot-number header line has several columns --
+        # require at least 3 so a stray "1 2" elsewhere in the
+        # text doesn't false-positive.
+        if len(parts) < 3:
+            return False
+
+        if not all(
+            part.isdigit()
+            for part in parts
+        ):
+            return False
+
+        numbers = [
+            int(part)
+            for part in parts
+        ]
+
+        return numbers == list(
+            range(1, len(numbers) + 1)
+        )
+
+    @classmethod
+    def detect_page_label_line(
+        cls,
+        text: str
+    ) -> str:
+
+        if not text:
+            return ""
+
+        lines = [
+            line.strip()
+            for line in text.split("\n")
+        ]
+
+        for index, line in enumerate(lines):
+
+            if not cls._is_sequential_slot_header_line(
+                line
+            ):
+                continue
+
+            # Walk backwards to the nearest non-empty line --
+            # that is the page's identity label.
+            for prior_index in range(
+                index - 1,
+                -1,
+                -1
+            ):
+
+                candidate = lines[prior_index].strip()
+
+                if candidate:
+                    return candidate
+
+            break
+
+        return ""
+
+    # ==========================================================
+    # PAGE IDENTITY (teacher / class / room)
+    # ==========================================================
+
+    @classmethod
+    def detect_page_identity(
+        cls,
+        page
+    ) -> Tuple[str, str]:
+
+        """
+        Determine what this page's timetable rows are FOR:
+
+            ("teacher", "<name>")   -- Facultywise page
+            ("class", "<class>")    -- Classwise page
+            ("room", "<room>")      -- Location/room-wise page
+            ("", "")                -- could not determine
+
+        This is the single place that decides page orientation,
+        so process_page() doesn't need to assume any one layout.
+        """
+
+        teacher = cls.detect_teacher(
+            page
+        )
+
+        if teacher:
+            return "teacher", teacher
+
+        try:
+            text = page.extract_text() or ""
+        except Exception:
+            text = ""
+
+        label = cls.detect_page_label_line(
+            text
+        )
+
+        if not label:
+            return "", ""
+
+        class_name = cls.detect_class(
+            label
+        )
+
+        if class_name:
+            return "class", class_name
+
+        room = cls.detect_room(
+            label
+        )
+
+        if room:
+            return "room", room
+
+        return "", ""
 
     @classmethod
     def detect_day(
@@ -382,6 +509,7 @@ class PDFImporter:
         )
 
         if not match:
+
             return ""
 
         h1, m1 = match.group(1).split(":")
@@ -453,8 +581,10 @@ class PDFImporter:
 
         patterns = [
 
+            # 3CS-DS-A
             r"\b\d+[A-Za-z]{2,}(?:-[A-Za-z0-9]+)+\b",
 
+            # 7CS-IOT
             r"\b\d+[A-Za-z]{2,}[A-Za-z0-9-]*\b",
         ]
 
@@ -475,6 +605,7 @@ class PDFImporter:
         if not candidates:
             return ""
 
+        # Remove obvious room-like values
         candidates = [
             x for x in candidates
             if not re.fullmatch(
@@ -486,13 +617,13 @@ class PDFImporter:
         if not candidates:
             return ""
 
+        # Prefer class names containing '-'
         dashed = [
             x for x in candidates
             if "-" in x
         ]
 
         if dashed:
-
             return max(
                 dashed,
                 key=len
@@ -517,7 +648,7 @@ class PDFImporter:
 
         candidates = []
 
-        # Example: CL-15
+        # CL-15
         candidates.extend(
             re.findall(
                 r"\b[A-Za-z]{1,10}-[A-Za-z0-9:]*\d+[A-Za-z0-9:-]*\b",
@@ -525,7 +656,7 @@ class PDFImporter:
             )
         )
 
-        # Example: 7F:EE-Lab13
+        # 7F:EE-Lab13
         candidates.extend(
             re.findall(
                 r"\b[A-Za-z0-9]+:+[A-Za-z0-9:-]*\d+[A-Za-z0-9:-]*\b",
@@ -533,7 +664,7 @@ class PDFImporter:
             )
         )
 
-        # Example: 301 / 103 / 306
+        # 301 / 103 / 306
         candidates.extend(
             re.findall(
                 r"\b\d{2,4}\b",
@@ -544,19 +675,21 @@ class PDFImporter:
         if not candidates:
             return ""
 
-        class_name = PDFImporter.detect_class(
-            text
+        class_name = (
+            PDFImporter.detect_class(
+                text
+            )
         )
 
         filtered = [
             x for x in candidates
-            if x.lower()
-            != class_name.lower()
+            if x.lower() != class_name.lower()
         ]
 
         if filtered:
             candidates = filtered
 
+        # Prefer CL-/Lab-like identifiers
         structured = [
             x for x in candidates
             if "-" in x or ":" in x
@@ -593,6 +726,7 @@ class PDFImporter:
         if not lines:
             return ""
 
+        # Remove group information
         lines = [
             x for x in lines
             if not re.match(
@@ -673,14 +807,28 @@ class PDFImporter:
     @classmethod
     def create_record(
         cls,
-        teacher: str,
         day: str,
         slot: int,
         slot_time: str,
         cell_text: str,
         source_file: str,
-        source_page: int
+        source_page: int,
+        teacher: str = "",
+        class_name: str = "",
+        room: str = ""
     ) -> Dict[str, Any]:
+
+        """
+        Build one timetable record for one (day, slot) cell.
+
+        Exactly one of `teacher` / `class_name` / `room` is
+        expected to be the PAGE-LEVEL identity (who/what this
+        entire page's grid is FOR), as determined by
+        detect_page_identity(). Whichever one is passed wins
+        over whatever the same field's cell-text extractor
+        would otherwise guess -- the other fields are still
+        extracted from the cell text as before.
+        """
 
         cell_text = (
             cell_text
@@ -695,23 +843,68 @@ class PDFImporter:
             " "
         ).strip()
 
+        # ------------------------------------------------------
+        # IMPORTANT:
+        #
+        # DO NOT remove empty cells.
+        #
+        # Empty cell is required to determine FREE.
+        # ------------------------------------------------------
+
         subject = cls.detect_subject(
             cell_text
         )
 
-        room = cls.detect_room(
+        extracted_room = cls.detect_room(
             cell_text
         )
 
-        class_name = cls.detect_class(
+        extracted_class = cls.detect_class(
             cell_text
         )
 
-        record_type = (
-            "FACULTY_FREE_SLOT"
-            if not cell_text
-            else "FACULTY_SCHEDULED"
+        # Page-level identity wins for its own field; the cell
+        # text is only used to fill in whichever of class/room
+        # ISN'T the page's own known identity.
+        final_room = room or extracted_room
+
+        final_class = class_name or extracted_class
+
+        has_content = bool(
+            cell_text
         )
+
+        if teacher:
+
+            record_type = (
+                "FACULTY_SCHEDULED"
+                if has_content
+                else "FACULTY_FREE_SLOT"
+            )
+
+        elif class_name:
+
+            record_type = (
+                "CLASS_SCHEDULED"
+                if has_content
+                else "CLASS_FREE_SLOT"
+            )
+
+        elif room:
+
+            record_type = (
+                "ROOM_SCHEDULED"
+                if has_content
+                else "ROOM_FREE_SLOT"
+            )
+
+        else:
+
+            record_type = (
+                "SCHEDULED"
+                if has_content
+                else "FREE_SLOT"
+            )
 
         return {
 
@@ -733,10 +926,10 @@ class PDFImporter:
                 subject,
 
             "room":
-                room,
+                final_room,
 
             "class_name":
-                class_name,
+                final_class,
 
             "group_name":
                 "",
@@ -810,15 +1003,45 @@ class PDFImporter:
         records = []
 
         # ------------------------------------------------------
-        # Detect teacher
+        # Detect what this page's grid is FOR: a teacher
+        # (facultywise), a class (classwise), or a room
+        # (location-wise). This is structure-based (the label
+        # immediately before the slot-header row), not tied to
+        # any specific sample name/code/filename.
         # ------------------------------------------------------
 
-        teacher = cls.detect_teacher(
-            page
+        identity_type, identity_value = (
+            cls.detect_page_identity(
+                page
+            )
         )
 
-        if not teacher:
+        # ------------------------------------------------------
+        # If neither a teacher, class, nor room label could be
+        # found, this page's orientation is unknown -- skip it
+        # rather than guessing.
+        # ------------------------------------------------------
+
+        if not identity_type:
             return records
+
+        teacher_kwarg = (
+            identity_value
+            if identity_type == "teacher"
+            else ""
+        )
+
+        class_kwarg = (
+            identity_value
+            if identity_type == "class"
+            else ""
+        )
+
+        room_kwarg = (
+            identity_value
+            if identity_type == "room"
+            else ""
+        )
 
         # ------------------------------------------------------
         # Extract tables
@@ -837,7 +1060,9 @@ class PDFImporter:
             header_index = None
 
             # --------------------------------------------------
-            # Find timetable header.
+            # Find row containing:
+            #
+            # 1 2 3 4 5 6 7 8
             # --------------------------------------------------
 
             for row_index, row in enumerate(
@@ -863,7 +1088,7 @@ class PDFImporter:
                 continue
 
             # --------------------------------------------------
-            # Process each day.
+            # Process day rows
             # --------------------------------------------------
 
             for row in table[
@@ -884,108 +1109,43 @@ class PDFImporter:
                     continue
 
                 # ------------------------------------------------
-                # IMPORTANT FIX
+                # VERY IMPORTANT:
                 #
-                # pdfplumber can return None for a cell that is
-                # part of a merged timetable event.
+                # Iterate over ALL slot columns.
                 #
-                # Example:
-                #
-                # Slot 1 = Python for DS Lab
-                # Slot 2 = None
-                # Slot 3 = None
-                #
-                # This does NOT necessarily mean:
-                #
-                # Slot 2 = FREE
-                # Slot 3 = FREE
-                #
-                # Instead, those cells may be continuations of
-                # the Slot 1 merged event.
+                # Do NOT skip None.
+                # None means FREE.
                 # ------------------------------------------------
-
-                previous_cell_text = None
 
                 for column_index, slot_info in (
                     slot_headers.items()
                 ):
 
-                    # --------------------------------------------
-                    # If the row does not contain this column,
-                    # treat it as genuinely unavailable rather
-                    # than producing a false record.
-                    # --------------------------------------------
-
                     if column_index >= len(row):
+                        continue
 
-                        raw_cell = ""
+                    cell = row[
+                        column_index
+                    ]
 
-                    else:
-
-                        raw_cell = row[
-                            column_index
-                        ]
-
-                    # --------------------------------------------
-                    # MERGED CELL HANDLING
-                    # --------------------------------------------
-
-                    if raw_cell is None:
-
-                        # None = continuation of previous event.
-                        cell = (
-                            previous_cell_text
-                            or ""
-                        )
-
-                    else:
-
-                        cell = str(
-                            raw_cell
-                        ).strip()
-
-                    # --------------------------------------------
-                    # Create record
-                    # --------------------------------------------
+                    if cell is None:
+                        cell = ""
 
                     record = cls.create_record(
-
-                        teacher=teacher,
-
                         day=day,
-
-                        slot=slot_info[
-                            "slot"
-                        ],
-
-                        slot_time=slot_info[
-                            "time"
-                        ],
-
+                        slot=slot_info["slot"],
+                        slot_time=slot_info["time"],
                         cell_text=cell,
-
                         source_file=source_file,
-
                         source_page=page_number,
+                        teacher=teacher_kwarg,
+                        class_name=class_kwarg,
+                        room=room_kwarg,
                     )
 
                     records.append(
                         record
                     )
-
-                    # --------------------------------------------
-                    # Only explicit cells update previous content.
-                    #
-                    # None must NOT erase the previous event.
-                    # --------------------------------------------
-
-                    if raw_cell is not None:
-
-                        previous_cell_text = (
-                            cell
-                            if cell
-                            else None
-                        )
 
         return records
 

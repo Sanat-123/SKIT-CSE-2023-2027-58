@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import os
 import sys
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -175,30 +176,46 @@ def import_single_file(uploaded_file):
     or QueryEngine -- that happens once, after every uploaded
     file's records have been combined (see
     build_combined_dataset() below).
+
+    IMPORTANT: the temporary file is written using the file's
+    ORIGINAL name, not a randomly generated one. CanonicalEvent-
+    Matcher.identify_source() classifies a record's source
+    (facultywise / classwise / location-wise) by looking for
+    those words in the "source_file" field, which is derived
+    directly from this path's filename. A randomized temp name
+    would make every uploaded PDF look like an unclassified
+    generic "PDF" source, which silently breaks faculty/class/
+    room free-slot detection even though the file imports
+    "successfully".
     """
 
-    suffix = Path(
-        uploaded_file.name
-    ).suffix
+    temp_dir = None
 
     temp_path = None
 
     try:
 
         # ----------------------------------------------------
-        # Create temporary file
+        # Create a fresh temp directory and write the file
+        # there under its ORIGINAL name.
         # ----------------------------------------------------
 
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=suffix
+        temp_dir = tempfile.mkdtemp()
+
+        temp_path = str(
+            Path(
+                temp_dir
+            ) / uploaded_file.name
+        )
+
+        with open(
+            temp_path,
+            "wb"
         ) as temp_file:
 
             temp_file.write(
                 uploaded_file.getbuffer()
             )
-
-            temp_path = temp_file.name
 
 
         # ----------------------------------------------------
@@ -286,14 +303,15 @@ def import_single_file(uploaded_file):
     finally:
 
         # ----------------------------------------------------
-        # Remove temporary file
+        # Remove temporary directory (and the file in it)
         # ----------------------------------------------------
 
-        if temp_path:
+        if temp_dir:
 
             try:
-                os.remove(
-                    temp_path
+                shutil.rmtree(
+                    temp_dir,
+                    ignore_errors=True
                 )
             except Exception:
                 pass

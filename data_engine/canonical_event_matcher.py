@@ -506,14 +506,45 @@ class CanonicalEventMatcher:
         if not cls.has_slot(record):
             return False
 
-        fields = [
+        # -----------------------------------------------------
+        # The field that represents THIS PAGE's own identity
+        # (e.g. class_name for a classwise page, room for a
+        # location-wise page) is always populated, even for a
+        # genuinely free slot -- it identifies the page, not
+        # whether the slot is occupied. That field must be
+        # excluded from the busy-signal check, or a
+        # classwise/location-wise page would never register a
+        # free slot at all.
+        # -----------------------------------------------------
 
-            "subject",
-            "room",
-            "class_name",
-            "group_name",
+        source = cls.identify_source(
+            record
+        )
 
-        ]
+        if source == "CLASSWISE":
+
+            fields = [
+                "subject",
+                "room",
+                "group_name",
+            ]
+
+        elif source == "LOCATIONWISE":
+
+            fields = [
+                "subject",
+                "class_name",
+                "group_name",
+            ]
+
+        else:
+
+            fields = [
+                "subject",
+                "room",
+                "class_name",
+                "group_name",
+            ]
 
         for field in fields:
 

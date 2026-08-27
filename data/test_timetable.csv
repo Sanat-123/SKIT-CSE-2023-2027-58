@@ -1,0 +1,544 @@
+Class,Teacher,Group,Subject,Length,Lessons/week,Available classrooms,Cycle,Classrooms
+3CS A,,,,,33.0,,,
+,Dr. Niketa Sharma,Group 2,DE Lab,Triple,1.0,"Shared room, ECL-08, 7F:EE-Lab13", All weeks,7F:EE-Lab13
+,Dr. Niketa Sharma,Group 1,DE Lab,Triple,1.0,"ECL-08, 7F:EE-Lab13, Subject's classrooms", All weeks,7F:EE-Lab13
+,Dr. Arpita Sharma,Group 2,SE Lab,Triple,1.0,"CL-15, CL-22, Subject's classrooms", All weeks,CL-22
+,Mr. Mahender Kumar Beniwal,Group 2,Java,Double,2.0,Subject's classrooms, All weeks,CL-1
+,Mr. Mahender Kumar Beniwal,Group 1,Java,Double,2.0,Subject's classrooms, All weeks,CL-1
+,Mr.Vikram Khandelwal,Group 1,DSA Lab,Double,2.0,Subject's classrooms, All weeks,5F::CP5
+,Mr.Vikram Khandelwal,Group 2,DSA Lab,Double,2.0,Subject's classrooms, All weeks,5F::CP5
+,Dr. Arpita Sharma,Group 1,SE Lab,Triple,1.0,"CL-15, CL-22, 5F::CP5, Subject's classrooms", All weeks,CL-22
+,Dr. Anjana Sangwan,Entire class,OS,Single,3.0,"Home classroom, Shared room", All weeks,403
+,Mr. Sumit Kumar,Entire class,ITR III,Single,1.0,"Home classroom, Shared room", All weeks,306
+,Dr. Niketa Sharma,Entire class,DE,Single,3.0,"Home classroom, Shared room", All weeks,"403, 301"
+,Mr.Vikram Khandelwal,Entire class,DSA,Single,3.0,"Home classroom, Shared room", All weeks,"403, 103"
+,Dr. Vijay Kumar Singhal,Entire class,SPT,Single,3.0,"Home classroom, Shared room, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"105, 403"
+,Dr. Arpita Sharma,Entire class,SE&PM,Single,3.0,"Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 406, 405, 404, 403, 306, 305, 304, 303, 302, 301, 106, 105, 104, 103", All weeks,"405, 105"
+,Dr. Shipra,Entire class,Audit Course SS,Single,1.0,"Shared room, Home classroom, APJ Seminar Hall, Kautilya Seminar", All weeks,APJ Seminar Hall
+,Mr. Madhukar Kumar,Entire class,MEFA,Single,2.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,403
+,,,,,,,,
+3CS B,,,,,33.0,,,
+,Ms. Sneha Sharma,Group 2,DSA Lab,Double,2.0,Subject's classrooms, All weeks,5F::CP5
+,MS.Suniti Chauhan,Group 2,Java,Double,2.0,Subject's classrooms, All weeks,CL-1
+,Dr. Arpita Sharma,Group 2,SE Lab,Triple,1.0,"CL-15, CL-22, Subject's classrooms", All weeks,CL-22
+,Mr. Iswer Singh,Group 1,SE Lab,Triple,1.0,"CL-22, Subject's classrooms", All weeks,CL-22
+,Mr.Vikram Khandelwal,Entire class,DSA,Single,3.0,Home classroom, All weeks,
+,Dr. Anjana Sangwan,Entire class,OS,Single,3.0,Home classroom, All weeks,
+,Dr. Vijay Kumar Singhal,Entire class,SPT,Single,3.0,Home classroom, All weeks,
+,Ms. Rekha Bhatt,Group 1,Java,Double,2.0,Subject's classrooms, All weeks,CL-1
+,Dr. Shipra,Entire class,Audit Course SS,Single,1.0,"Shared room, Home classroom, APJ Seminar Hall, Kautilya Seminar", All weeks,APJ Seminar Hall
+,Ms. Sneha Sharma,Group 1,DSA Lab,Double,2.0,"Subject's classrooms, CL-11, CL-15, CL-16, CL-22, CL-17, CL-1, CL-2, CL-3, CL-10, CL-13, CL-14, CL-18, CL-19, CL-20, CL-21, 5F::CP5", All weeks,5F::CP5
+,Mr. Vinod Kataria,Group 1,DE Lab,Triple,1.0,"Shared room, ECL-08, 7F:EE-Lab13, ECL-12", All weeks,ECL-12
+,Dr. Niketa Sharma,Group 2,DE Lab,Triple,1.0,"Shared room, ECL-08, 7F:EE-Lab13, ECL-12", All weeks,ECL-12
+,Dr. Arpita Sharma,Entire class,SE&PM,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"403, 106"
+,Dr. Niketa Sharma,Entire class,DE,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"405, 105, 106"
+,Mr. Madhukar Kumar,Entire class,MEFA,Single,2.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,106
+,Mr. Sumit Kumar,Entire class,ITR III,Single,1.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,403
+,,,,,,,,
+3CS C,,,,,33.0,,,
+,Ms. Sarla Jangid,Group 2,Java,Double,2.0,Subject's classrooms, All weeks,CL-1
+,Ms. Sarla Jangid,Group 1,Java,Double,2.0,Subject's classrooms, All weeks,CL-1
+,Mr. Ashish Pant,Group 2,DSA Lab,Double,2.0,Subject's classrooms, All weeks,5F::CP5
+,Dr. Aakriti Sharma,Group 1,SE Lab,Triple,1.0,"CL-15, CL-22, Subject's classrooms", All weeks,CL-22
+,Dr. Aakriti Sharma,Group 2,SE Lab,Triple,1.0,"CL-15, CL-22, Subject's classrooms", All weeks,CL-22
+,Ms. Payal Mittal,Entire class,DE,Single,3.0,Home classroom, All weeks,
+,Dr. Aakriti Sharma,Entire class,SE&PM,Single,3.0,Home classroom, All weeks,
+,Ms. Payal Mittal,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,Mr. Sudesh Garg,Entire class,MEFA,Single,2.0,Home classroom, All weeks,
+,Dr. Yogendra Gupta,Group 1,DE Lab,Triple,1.0,"Shared room, ECL-08, 7F:EE-Lab13", All weeks,7F:EE-Lab13
+,Ms. Sneha Sharma,Entire class,OS,Single,3.0,"7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"104, 301, 105"
+,Ms. Sneha Sharma,Group 1,DSA Lab,Double,2.0,"Subject's classrooms, CL-10, CL-15, CL-16, CL-11, CL-22, CL-17, CL-1, CL-2, CL-3, CL-13, CL-14, CL-18, CL-19, CL-20, CL-7", All weeks,5F::CP5
+,Dr. Vijay Kumar Singhal,Entire class,SPT,Single,3.0,"Home classroom, 103", All weeks,103
+,Dr. Shipra,Entire class,Audit Course SS,Single,1.0,"Shared room, Home classroom, APJ Seminar Hall", All weeks,APJ Seminar Hall
+,Mr. Vinod Kataria,Group 2,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, Subject's classrooms", All weeks,ECL-08
+,Mr. Ashish Pant,Entire class,DSA,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"405, 103, 301"
+,,,,,,,,
+3CS D,,,,,33.0,,,
+,Mr. Ashish Pant,Group 1,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-15
+,Mr. Ashish Pant,Group 2,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-16
+,Dr. Aakriti Sharma,Group 1,SE Lab,Triple,1.0,"CL-15, CL-22, CL-20, CL-18, 7F:CP7, Subject's classrooms", All weeks,CL-22
+,Mr. Iswer Singh,Group 2,SE Lab,Triple,1.0,"CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, CL-18, 7F:CP7, CL-20, Subject's classrooms", All weeks,CL-22
+,MS.Suniti Chauhan,Group 1,Java,Double,2.0,"5F::CP5, CL-15, CL-16, CL-22, CL-1, CL-13, 7F:CP7", All weeks,7F:CP7
+,MS.Suniti Chauhan,Group 2,Java,Double,2.0,Subject's classrooms, All weeks,CL-13
+,Mr. Ashish Pant,Entire class,DSA,Single,3.0,Home classroom, All weeks,
+,Dr. Vijay Kumar Singhal,Entire class,SPT,Single,3.0,Home classroom, All weeks,
+,Mr. Sumit Kumar,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,Ms. Payal Mittal,Group 2,DE Lab,Triple,1.0,"Shared room, ECL-08, 7F:EE-Lab13, ECL-12", All weeks,7F:EE-Lab13
+,Ms. Payal Mittal,Group 1,DE Lab,Triple,1.0,"Shared room, ECL-08, 7F:EE-Lab13, ECL-12", All weeks,7F:EE-Lab13
+,Dr. Shipra,Entire class,Audit Course SS,Single,1.0,"Shared room, Home classroom, APJ Seminar Hall, Kautilya Seminar", All weeks,APJ Seminar Hall
+,Mr. Sudesh Garg,Entire class,MEFA,Single,2.0,"Home classroom, 203", All weeks,203
+,Dr. Aakriti Sharma,Entire class,SE&PM,Single,3.0,"Home classroom, 203", All weeks,203
+,Ms. Payal Mittal,Entire class,DE,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"404, 105"
+,Ms. Sneha Sharma,Entire class,OS,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 203", All weeks,"404, 203, 305"
+,,,,,,,,
+3CS E,,,,,33.0,,,
+,Ms. Mani Butwall,Group 1,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-15
+,Ms. Mani Butwall,Group 2,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-16
+,Mr. Shivank Lavania,Group 1,SE Lab,Triple,1.0,"CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, CL-18, 7F:CP7, CL-20, Subject's classrooms", All weeks,CL-22
+,Mr. Shivank Lavania,Group 2,SE Lab,Triple,1.0,"CL-15, CL-22, CL-21, Subject's classrooms", All weeks,CL-22
+,Dr. Kajal Mathur,Group 2,Java,Double,2.0,Subject's classrooms, All weeks,CL-13
+,Dr. S. Sarabjeet Singh Sethi,Entire class,DE,Single,3.0,Home classroom, All weeks,
+,Ms. Mani Butwall,Entire class,DSA,Single,3.0,Home classroom, All weeks,
+,Ms. Rekha Bhatt,Group 1,Java,Double,2.0,Subject's classrooms, All weeks,CL-13
+,Dr. Sunil Dhankhar,Entire class,OS,Single,3.0,"Home classroom, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,
+,Dr. S. Sarabjeet Singh Sethi,Group 1,DE Lab,Triple,1.0,"Shared room, ECL-08, 7F:EE-Lab13, ECL-12", All weeks,ECL-12
+,Ms. Vandana Devnanai,Entire class,Audit Course SS,Single,1.0,"Shared room, Home classroom, APJ Seminar Hall, Kautilya Seminar", All weeks,APJ Seminar Hall
+,Mr. Vinod Kataria,Group 2,DE Lab,Triple,1.0,"Shared room, ECL-08, Subject's classrooms, ECL-12", All weeks,ECL-12
+,Dr. Vijay Kumar Singhal,Entire class,SPT,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"405, 404"
+,Mr. Harpreet Singh Gill,Entire class,SE&PM,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,405
+,Mr. Harpreet Singh Gill,Entire class,ITR III,Single,1.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,403
+,Mr. Brij Mohan Sharma,Entire class,MEFA,Single,2.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,105
+,,,,,,,,
+3CS F,,,,,33.0,,,
+,Dr. Kajal Mathur,Group 2,Java,Double,2.0,Subject's classrooms, All weeks,CL-13
+,Dr. Kajal Mathur,Group 1,Java,Double,2.0,Subject's classrooms, All weeks,CL-13
+,Ms. Mani Butwall,Group 1,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-16
+,Mr. Sohan Gupta,Group 2,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-16
+,Mr. Harpreet Singh Gill,Group 2,SE Lab,Triple,1.0,"CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, CL-18, 7F:CP7, CL-20, Subject's classrooms", All weeks,CL-21
+,Mr. Harpreet Singh Gill,Group 1,SE Lab,Triple,1.0,"CL-15, CL-22, Subject's classrooms", All weeks,CL-22
+,Dr. S. Sarabjeet Singh Sethi,Group 1,DE Lab,Triple,1.0,"Shared room, ECL-08, Subject's classrooms", All weeks,ECL-08
+,Dr. S. Sarabjeet Singh Sethi,Entire class,DE,Single,3.0,Home classroom, All weeks,
+,Mr. Harpreet Singh Gill,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,Dr. Vivek Vijay,Entire class,SPT,Single,3.0,Home classroom, All weeks,
+,Dr. S. Sarabjeet Singh Sethi,Group 2,DE Lab,Triple,1.0,"Shared room, ECL-08, Subject's classrooms, ECL-12", All weeks,ECL-08
+,Mr. Nitin Goyal,Entire class,MEFA,Single,2.0,Home classroom, All weeks,
+,Dr. Kajal Mathur,Entire class,OS,Single,3.0,Home classroom, All weeks,
+,Ms. Vandana Devnanai,Entire class,Audit Course SS,Single,1.0,"Shared room, Home classroom, APJ Seminar Hall, Kautilya Seminar", All weeks,APJ Seminar Hall
+,Ms. Mani Butwall,Entire class,DSA,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"301, 405, 305"
+,Mr. Harpreet Singh Gill,Entire class,SE&PM,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"305, 406"
+,,,,,,,,
+3CS AI-A,,,,,32.0,,,
+,Mr. Kapil Sharma,Group 1,LP Lab,Triple,1.0,"CL-7, CL-14, Subject's classrooms", All weeks,CL-7
+,Mr. Kapil Sharma,Group 2,LP Lab,Triple,1.0,"CL-7, CL-14, Subject's classrooms", All weeks,CL-7
+,Ms. Palika Jajoo,Group 1,DSA Lab,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, CL-11, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, Subject's classrooms, CL-17", All weeks,CL-17
+,Ms. Palika Jajoo,Group 2,DSA Lab,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, CL-11, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, CL-17", All weeks,CL-17
+,Ms. Kiran Aahuja,Group 1,Java,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, CL-11, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, Subject's classrooms", All weeks,CL-18
+,Ms. Kiran Aahuja,Group 2,Java,Double,2.0,"Subject's classrooms, CL-21, CL-18, CL-20", All weeks,CL-18
+,Dr. Yogendra Gupta,Group 2,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08", All weeks,ECL-08
+,Dr. Vinita Mathur,Group 1,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08", All weeks,ECL-08
+,Ms. Palika Jajoo,Entire class,DSA,Single,3.0,Home classroom, All weeks,
+,Ms. Payal Mittal,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,Ms. Sarla Jangid,Entire class,Audit Course TT,Single,1.0,"Home classroom, Central Lib", All weeks,Central Lib
+,Ms. Raunak Goswami,Entire class,TC,Single,1.0,Home classroom, All weeks,
+,Dr. Vivek Vijay,Entire class,SPT,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"301, 406"
+,Dr. Vinita Mathur,Entire class,DE,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"103, 302, 405"
+,Mr. Kapil Sharma,Entire class,FoAI,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"403, 302, 405"
+,Ms. Kiran Aahuja,Entire class,SE&PM,Single,3.0,"Home classroom, 301, 302", All weeks,"301, 302"
+,,,,,,,,
+3CS AI-B,,,,,32.0,,,
+,Ms. Palika Jajoo,Group 1,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-16
+,Mr. Vinod Yadav,Group 2,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-15
+,Mr. Kapil Sharma,Group 1,LP Lab,Triple,1.0,"CL-7, CL-14, Subject's classrooms", All weeks,CL-7
+,Dr. Vinita Mathur,Group 2,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08", All weeks,ECL-08
+,Ms. Kiran Aahuja,Entire class,SE&PM,Single,3.0,Home classroom, All weeks,
+,Ms. Kiran Aahuja,Group 2,Java,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B", All weeks,CL-18
+,Ms. Palika Jajoo,Entire class,DSA,Single,3.0,Home classroom, All weeks,
+,Ms Anamika Soni,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,Ms. Sarla Jangid,Entire class,Audit Course TT,Single,1.0,"Home classroom, Central Lib", All weeks,Central Lib
+,Ms.Himani Thakur,Group 1,Java,Double,2.0,"Subject's classrooms, CL-1, CL-3, CL-18, CL-13, CL-20", All weeks,5F:CP6
+,Dr. Vivek Vijay,Entire class,SPT,Single,3.0,Home classroom, All weeks,
+,Dr. Vinita Mathur,Entire class,DE,Single,3.0,"Home classroom, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06", All weeks,"103, 305, 301"
+,Ms. Raunak Goswami,Entire class,TC,Single,1.0,Home classroom, All weeks,
+,Dr. Vinita Mathur,Group 1,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08, ECL-12", All weeks,ECL-12
+,Mr. Kapil Sharma,Group 2,LP Lab,Triple,1.0,"CL-7, CL-14, Subject's classrooms, CL-15", All weeks,CL-15
+,Mr. Kapil Sharma,Entire class,FoAI,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"106, 301, 103"
+,,,,,,,,
+3CS AI-C,,,,,32.0,,,
+,DR.Manisha Samntha,Group 2,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-15
+,Ms. Swati Yadav,Group 1,LP Lab,Triple,1.0,"CL-7, CL-14, Subject's classrooms", All weeks,CL-7
+,Dr.Archika Jain,Group 1,Java,Double,2.0,Subject's classrooms, All weeks,"CL-13, 5F:CP6"
+,Dr. Jyoti Singh,Entire class,SE&PM,Single,3.0,Home classroom, All weeks,
+,DR.Manisha Samntha,Entire class,DSA,Single,3.0,Home classroom, All weeks,
+,Dr. Jyoti Singh,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,Ms. Sarla Jangid,Entire class,Audit Course TT,Single,1.0,"Home classroom, Central Lib", All weeks,Central Lib
+,Dr. Abdul Naim Khan,Group 2,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08, ECL-12", All weeks,ECL-12
+,Dr.Archika Jain,Group 2,Java,Double,2.0,"Subject's classrooms, CL-1, CL-13, CL-18, CL-20, CL-3", All weeks,CL-13
+,Dr. Yogendra Gupta,Group 1,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08, ECL-12", All weeks,7F:EE-Lab13
+,Dr. Vivek Vijay,Entire class,SPT,Single,3.0,Home classroom, All weeks,
+,Dr. Divanshi,Entire class,TC,Single,1.0,Home classroom, All weeks,
+,Ms. Swati Yadav,Group 2,LP Lab,Triple,1.0,"CL-7, CL-14, Subject's classrooms", All weeks,CL-7
+,DR.Manisha Samntha,Group 1,DSA Lab,Double,2.0,"Subject's classrooms, 5F:CP6, CL-10", All weeks,CL-10
+,Dr. Abdul Naim Khan,Entire class,DE,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"304, 301"
+,Ms. Swati Yadav,Entire class,FoAI,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"104, 303, 301"
+,,,,,,,,
+3CS AI-D,,,,,32.0,,,
+,Mr. Vinod Yadav,Group 2,DSA Lab,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, Subject's classrooms", All weeks,CL-10
+,Ms. Swati Yadav,Group 2,LP Lab,Triple,1.0,"CL-7, CL-14, Subject's classrooms, 7F:CP7", All weeks,CL-7
+,Dr. Abdul Naim Khan,Entire class,DE,Single,3.0,Home classroom, All weeks,
+,Dr. Jyoti Singh,Entire class,SE&PM,Single,3.0,Home classroom, All weeks,
+,Ms. Swati Yadav,Group 1,LP Lab,Triple,1.0,"5F::CP5, CL-15, CL-16, CL-22, CL-1, CL-13, 7F:CP7, Subject's classrooms", All weeks,7F:CP7
+,Ms. Swati Yadav,Entire class,FoAI,Single,3.0,Home classroom, All weeks,
+,Dr. Jyoti Singh,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,Mr. Neeraj Garg,Entire class,Audit Course TT,Single,1.0,"Home classroom, Central Lib", All weeks,Central Lib
+,DR.Manisha Samntha,Entire class,DSA,Single,3.0,"Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,
+,Dr.Archika Jain,Group 1,Java,Double,2.0,"Subject's classrooms, CL-2, CL-11, CL-13, CL-18, CL-20", All weeks,CL-11
+,Dr. Abdul Naim Khan,Group 1,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08, ECL-12", All weeks,ECL-12
+,Dr. Abdul Naim Khan,Group 2,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08, ECL-12", All weeks,ECL-12
+,Dr. Vivek Vijay,Entire class,SPT,Single,3.0,Home classroom, All weeks,
+,Dr. Divanshi,Entire class,TC,Single,1.0,Home classroom, All weeks,
+,DR.Manisha Samntha,Group 1,DSA Lab,Double,2.0,"Subject's classrooms, CL-15, CL-16, CL-14, CL-10, 5F:CP6", All weeks,CL-16
+,Dr.Archika Jain,Group 2,Java,Double,2.0,"Subject's classrooms, CL-1, CL-3, CL-13, CL-18, CL-20, 7F:CP7", All weeks,7F:CP7
+,,,,,,,,
+3CS DS-A,,,,,32.0,,,
+,Ms. Shanu Tripathi,Group 2,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08", All weeks,ECL-08
+,Ms. Abha Jain,Group 2,DSA Lab,Double,2.0,Subject's classrooms, All weeks,5F::CP5
+,Ms. Abha Jain,Group 1,DSA Lab,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, Subject's classrooms", All weeks,5F:CP6
+,Ms. Shanu Tripathi,Entire class,DE,Single,3.0,Home classroom, All weeks,
+,Mr. Iswer Singh,Entire class,SE&PM,Single,3.0,Home classroom, All weeks,
+,Mr. Pawan Kumar Patidar,Group 1,Java,Double,2.0,Subject's classrooms, All weeks,CL-1
+,Mr. Pawan Kumar Patidar,Group 2,Java,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, Subject's classrooms", All weeks,CL-19
+,Ms. Abha Jain,Entire class,DSA,Single,3.0,Home classroom, All weeks,
+,Mr. Neeraj Garg,Entire class,FoDS,Single,3.0,Home classroom, All weeks,
+,Mr. Neeraj Garg,Entire class,Audit Course TT,Single,1.0,"Home classroom, Central Lib", All weeks,Central Lib
+,Dr. Yogendra Gupta,Group 1,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08", All weeks,ECL-08
+,Mr. Nikhil Sharma(Maths),Entire class,SPT,Single,3.0,Home classroom, All weeks,
+,Dr. Aditi Tiwari,Entire class,TC,Single,1.0,"Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,
+,Mr. Shirish Nagar,Group 2,Python for DS Lab,Triple,1.0,"CL-15, CL-22, CL-10, Subject's classrooms", All weeks,CL-7
+,Mr. Shirish Nagar,Group 1,Python for DS Lab,Triple,1.0,"CL-15, CL-22, Subject's classrooms", All weeks,CL-7
+,Ms Anamika Soni,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,,,,,,,,
+3CS DS-B,,,,,32.0,,,
+,Ms. Abha Jain,Group 1,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-16
+,Mr. Neeraj Garg,Group 1,Python for DS Lab,Triple,1.0,"CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, CL-18, 7F:CP7, CL-20, Subject's classrooms", All weeks,CL-7
+,Mr. Neeraj Garg,Group 2,Python for DS Lab,Triple,1.0,"CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, CL-18, 7F:CP7, CL-20, Subject's classrooms", All weeks,CL-7
+,Mr. Vinod Yadav,Group 2,DSA Lab,Double,2.0,"Subject's classrooms, CL-10", All weeks,CL-10
+,Ms. Shanu Tripathi,Group 1,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08, ECL-12", All weeks,ECL-08
+,Ms. Shanu Tripathi,Entire class,DE,Single,3.0,Home classroom, All weeks,
+,Mr. Pawan Kumar Patidar,Group 2,Java,Double,2.0,"Subject's classrooms, 7F:CP7, 5F::CP5", All weeks,7F:CP7
+,Ms. Abha Jain,Entire class,DSA,Single,3.0,Home classroom, All weeks,203
+,Mr. Neeraj Garg,Entire class,FoDS,Single,3.0,Home classroom, All weeks,203
+,Ms Anamika Soni,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,Mr. Neeraj Garg,Entire class,Audit Course TT,Single,1.0,"Home classroom, Central Lib", All weeks,Central Lib
+,Ms. Shanu Tripathi,Group 2,DE Lab,Triple,1.0,"Shared room, 7F:EE-Lab13, ECL-08", All weeks,ECL-08
+,Mr. Nikhil Sharma(Maths),Entire class,SPT,Single,3.0,"Home classroom, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06", All weeks,"105, 303, 304"
+,Dr. Aditi Tiwari,Entire class,TC,Single,1.0,Home classroom, All weeks,
+,Mr. Iswer Singh,Entire class,SE&PM,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"106, 304, 303"
+,Mr. Pawan Kumar Patidar,Group 1,Java,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, CL-11, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, Subject's classrooms, 5F::CP5, 7F:CP7, CL-15", All weeks,CL-15
+,,,,,,,,
+3CS IOT,,,,,33.0,,,
+,Mr. Dinesh Kumar,Group 2,ES for IOT,Triple,1.0,"Shared room, CL-15, CL-22, 7F:CP7, CL-18, CL-20, ECL-11", All weeks,ECL-11
+,Mr. Dinesh Kumar,Group 1,ES for IOT,Triple,1.0,"Shared room, CL-15, CL-22, CL-18, 7F:CP7, CL-20, ECL-11", All weeks,ECL-11
+,Dr. Vinay Kanungo,Group 2,DE Lab,Triple,1.0,"Shared room, ECL-08, 7F:EE-Lab13, ECL-12", All weeks,ECL-12
+,Mr. Sohan Gupta,Group 2,DSA Lab,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, CL-1, CL-13, 7F:CP7", All weeks,5F:CP6
+,Mr. Sohan Gupta,Group 1,DSA Lab,Double,2.0,Subject's classrooms, All weeks,CL-16
+,Dr. Vinay Kanungo,Group 1,DE Lab,Triple,1.0,"Shared room, ECL-08, 7F:EE-Lab13, ECL-12", All weeks,ECL-12
+,Dr. Vinay Kanungo,Entire class,DE,Single,3.0,Home classroom, All weeks,
+,Ms.Himani Thakur,Group 2,Java,Double,2.0,Subject's classrooms, All weeks,5F:CP6
+,Mr. Sohan Gupta,Entire class,DSA,Single,3.0,Home classroom, All weeks,
+,Mr. Dinesh Kumar,Entire class,ESIoT,Single,3.0,Home classroom, All weeks,
+,Ms Anamika Soni,Entire class,ITR III,Single,1.0,Home classroom, All weeks,
+,Ms.Himani Thakur,Group 1,Java,Double,2.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, CL-1, CL-13", All weeks,CL-20
+,Mr. Iswer Singh,Entire class,SE&PM,Single,3.0,"Home classroom, 103, 104, 105, 301, 106, 302, 303, 305, 304, 306, 403, 404, 405, 7FL:9, 406, ME-103, ME-302, 203, 102, ECL-06", All weeks,"305, 301, 106"
+,Mr. Brij Mohan Sharma,Entire class,MEFA,Single,2.0,Home classroom, All weeks,
+,Ms. Vandana Devnanai,Entire class,Audit Course SS,Single,1.0,"Shared room, Home classroom, APJ Seminar Hall, Kautilya Seminar", All weeks,APJ Seminar Hall
+,Mr. Nikhil Sharma(Maths),Entire class,SPT,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"301, 104, 106"
+,,,,,,,,
+5CSA,,,,,32.0,,,
+,Mr. Deepak Goyal,Group 1,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, CL-15, CL-22, Subject's classrooms", All weeks,5F:CP6
+,Mr. Deepak Goyal,Group 2,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, CL-15, CL-22, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, CL-19, CL-1, CL-11, CL-14, CL-21, CL-17, Subject's classrooms", All weeks,CL-14
+,Ms. Priyanka Sharma,Group 1,ML Lab,Double,1.0,"CL-19, CL-1, CL-16, CL-2, CL-21, Subject's classrooms", All weeks,CL-11
+,Ms. Richa Sharma,Group 1,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-16, CL-2, CL-21, Subject's classrooms", All weeks,CL-3
+,NS,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,7FL12 A
+,Ms. Richa Sharma,Entire class,DAA,Single,3.0,Home classroom, All weeks,
+,Mr. Shivank Lavania,Entire class,DPP,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Mr. Vikash Dhankar,Entire class,ITR V,Single,2.0,Home classroom, All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Ms. Priyanka Sharma,Group 2,ML Lab,Double,1.0,"Subject's classrooms, CL-21, CL-19, CL-18, CL-17, 5F::CP5", All weeks,CL-19
+,Ms. Richa Sharma,Group 2,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-16, CL-2, CL-7, CL-3, 5F::CP5, CL-13, CL-10, 5F:CP6, CL-19, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, Subject's classrooms, 7F:CP7", All weeks,CL-3
+,Mr. Deepak Goyal,Entire class,FSD,Single,2.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"304, 303"
+,Ms. Priyanka Sharma,Entire class,ML,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"303, 106, 304"
+,Mr. Vikash Dhankar,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06", All weeks,"104, 302, 303"
+,,,,,,,,
+5CSB,,,,,32.0,,,
+,Mr. Deepak Goyal,Group 1,FSD Lab ,Double,1.0,"Shared room, CL-20, 5F:CP6, CL-13, CL-19, CL-1, CL-15, CL-21, CL-16, 7F:CP7, Subject's classrooms", All weeks,5F:CP6
+,Mr. Deepak Goyal,Group 2,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, Subject's classrooms", All weeks,CL-14
+,Ms. Richa Sharma,Group 1,DAA Lab,Double,1.0,"Shared room, CL-20, CL-16, CL-2, CL-3, 5F::CP5, CL-7, CL-10, 5F:CP6, CL-13, CL-19, CL-1, CL-15, CL-22, CL-11, CL-14, CL-21, CL-17, CL-18, 7F:CP7, Subject's classrooms", All weeks,CL-11
+,Ms. Richa Sharma,Group 2,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-21, CL-16, CL-2, CL-7, CL-3, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-22, CL-15, CL-11, CL-14, Subject's classrooms", All weeks,CL-10
+,NS,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,7FL12 A
+,Ms. Richa Sharma,Entire class,DAA,Single,3.0,Home classroom, All weeks,
+,Mr. Deepak Goyal,Entire class,FSD,Single,2.0,Home classroom, All weeks,
+,Mr. Shivank Lavania,Entire class,DPP,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Ms. Richa Sharma,Entire class,ITR V,Single,2.0,Home classroom, All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Ms. Priyanka Sharma,Group 1,ML Lab,Double,1.0,"Subject's classrooms, CL-21", All weeks,CL-11
+,Mr. Vikash Dhankar,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06", All weeks,"304, 105, 306"
+,Ms. Priyanka Sharma,Group 2,ML Lab,Double,1.0,"Subject's classrooms, CL-21, CL-19, CL-18, CL-17, CL-11, CL-7, CL-15, CL-16, CL-22, CL-1, CL-2, CL-3, CL-10, CL-13, CL-14, CL-20, 5F::CP5, 5F:CP6, 7F:CP7", All weeks,CL-11
+,Ms. Priyanka Sharma,Entire class,ML,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"304, 105, 303"
+,,,,,,,,
+5CSC,,,,,32.0,,,
+,Mr. Deepak Goyal,Group 2,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, Subject's classrooms", All weeks,5F:CP6
+,Dr. Meenakshi Nawal,Group 1,DAA Lab,Double,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, CL-18, 7F:CP7, CL-20, Subject's classrooms", All weeks,CL-3
+,Dr. Meenakshi Nawal,Group 2,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-21, CL-16, CL-2, CL-13, 5F:CP6, CL-19, CL-15, CL-11, CL-14, Subject's classrooms", All weeks,CL-3
+,Dr. Karuna Sharma,Group 2,ML Lab,Double,1.0,"CL-2, CL-3, CL-10, CL-14, CL-18, CL-19, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B", All weeks,5F::CP5
+,Dr. Karuna Sharma,Entire class,ML,Single,3.0,Home classroom, All weeks,
+,Ms. Sarla Jangid,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"305, 304, 306"
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Mr. Deepak Goyal,Group 1,FSD Lab ,Double,1.0,"Shared room, CL-20, Subject's classrooms, 5F:CP6, CL-14", All weeks,CL-14
+,Dr. Karuna Sharma,Group 1,ML Lab,Double,1.0,"Subject's classrooms, CL-21, CL-19, CL-18, CL-11, CL-17, 5F::CP5", All weeks,CL-19
+,Dr. Vinay Kanungo,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,7FL12 A
+,Dr. Meenakshi Nawal,Entire class,ITR V,Single,2.0,Home classroom, All weeks,
+,Mr. Deepak Goyal,Entire class,FSD,Single,2.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"304, 301"
+,Ms. Rekha Bhatt,Entire class,DPP,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"106, 305"
+,Dr. Meenakshi Nawal,Entire class,DAA,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"106, 301, 103"
+,,,,,,,,
+5CS-D,,,,,32.0,,,
+,Mr. Sushant Singh,Group 1,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, CL-13, CL-19, CL-10, CL-3, CL-2, CL-1, Subject's classrooms", All weeks,CL-14
+,Mr. Sushant Singh,Group 2,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, Subject's classrooms", All weeks,CL-14
+,Dr. Meenakshi Nawal,Group 2,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-21, CL-16, CL-3, CL-2, CL-7, 5F::CP5, CL-10, CL-13, CL-19, 5F:CP6, CL-15, CL-11, CL-14, Subject's classrooms", All weeks,CL-3
+,Vik,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,7FL12 B
+,Ms.Himani Thakur,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"104, 103, 306"
+,Mr. Sushant Singh,Entire class,FSD,Single,2.0,Home classroom, All weeks,
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Dr. Karuna Sharma,Group 2,ML Lab,Double,1.0,"Subject's classrooms, CL-19, CL-21, CL-18, CL-17, CL-11, 5F::CP5", All weeks,CL-19
+,Dr. Meenakshi Nawal,Group 1,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-16, CL-13, 5F:CP6, CL-19, CL-21, Subject's classrooms, CL-11", All weeks,CL-3
+,Dr. Karuna Sharma,Group 1,ML Lab,Double,1.0,"CL-2, CL-3, CL-10, CL-14, CL-18, CL-19, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, CL-7, CL-11, CL-15, CL-16, CL-22, CL-17, CL-1, CL-13, 7F:CP7", All weeks,CL-21
+,Dr. Nilam,Entire class,ITR V,Single,2.0,Home classroom, All weeks,
+,Ms. Rekha Bhatt,Entire class,DPP,Single,3.0,Home classroom, All weeks,
+,Dr. Karuna Sharma,Entire class,ML,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"306, 304, 302"
+,Dr. Meenakshi Nawal,Entire class,DAA,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"304, 302, 306"
+,,,,,,,,
+5CSE,,,,,32.0,,,
+,Mr. Sushant Singh,Group 1,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, CL-21, Subject's classrooms, CL-17", All weeks,CL-14
+,MKB,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,"5FL4-A, 7FL12 A"
+,Ms Neetu Agrawal,Entire class,DAA,Single,3.0,Home classroom, All weeks,
+,Dr. Loveleen Kumar,Entire class,ML,Single,3.0,Home classroom, All weeks,203
+,Ms.Himani Thakur,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"305, 104, 304"
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Dr. Loveleen Kumar,Entire class,ITR V,Single,2.0,Home classroom, All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Mr. Sushant Singh,Group 2,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, CL-21, Subject's classrooms, CL-14", All weeks,CL-14
+,Ms Neetu Agrawal,Group 2,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-21, CL-18, 7F:CP7, Subject's classrooms, CL-11", All weeks,CL-20
+,Ms Neetu Agrawal,Group 1,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-21, CL-18, 7F:CP7, Subject's classrooms, CL-11, CL-7, CL-15, CL-16, CL-22, CL-17, CL-2, CL-3, CL-10, CL-13, CL-14, 5F::CP5, 5F:CP6", All weeks,CL-20
+,Dr. Loveleen Kumar,Group 1,ML Lab,Double,1.0,"CL-19, CL-21, Subject's classrooms", All weeks,CL-19
+,Dr. Loveleen Kumar,Group 2,ML Lab,Double,1.0,"Subject's classrooms, CL-21, CL-19, CL-18, CL-17, CL-11, CL-3", All weeks,CL-3
+,Mr. Sumit Kumar,Entire class,DPP,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"405, 305, 304"
+,Mr. Sushant Singh,Entire class,FSD,Single,2.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 203", All weeks,"203, 104"
+,,,,,,,,
+5CS F,,,,,32.0,,,
+,Mr. Sushant Singh,Group 1,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, CL-21, Subject's classrooms", All weeks,CL-14
+,Mr. Sushant Singh,Group 2,FSD Lab ,Double,1.0,"Shared room, 5F:CP6, CL-20, CL-21, Subject's classrooms", All weeks,CL-14
+,Dr. Loveleen Kumar,Group 1,ML Lab,Double,1.0,"CL-19, CL-21, Subject's classrooms", All weeks,CL-19
+,Ms Neetu Agrawal,Group 1,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-21, CL-18, 7F:CP7, Subject's classrooms", All weeks,CL-20
+,Ms Neetu Agrawal,Group 2,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-21, CL-18, 7F:CP7, Subject's classrooms", All weeks,CL-3
+,MKB,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,7FL12 A
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Mr. Vikash Dhankar,Entire class,ITR V,Single,2.0,Home classroom, All weeks,
+,Ms. Sarla Jangid,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"304, 105, 103"
+,Ms Neetu Agrawal,Entire class,DAA,Single,3.0,"Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,
+,Mr. Sushant Singh,Entire class,FSD,Single,2.0,"Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Dr. Loveleen Kumar,Group 2,ML Lab,Double,1.0,"CL-19, CL-21, Subject's classrooms, CL-18", All weeks,CL-18
+,Dr. Loveleen Kumar,Entire class,ML,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"103, 105"
+,Mr. Sumit Kumar,Entire class,DPP,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"306, 106, 105"
+,,,,,,,,
+5CS AI-A,,,,,32.0,,,
+,Ms. Neha Mathur,Group 1,CD Lab,Double,1.0,Subject's classrooms, All weeks,CL-17
+,Ms. Neha Mathur,Group 2,CD Lab,Double,1.0,Subject's classrooms, All weeks,CL-17
+,Ms. Nidhi Srivastav,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,7FL12 B
+,Ms. Neha Mathur,Entire class,AT& CD,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Ms. Neha Mathur,Entire class,ITR V,Single,2.0,Home classroom, All weeks,
+,Mr. Manish Kumar Sharma,Entire class,ML,Single,3.0,"Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Mr. Manish Kumar Sharma,Group 1,ML Lab,Double,1.0,"Subject's classrooms, CL-21, CL-19, CL-18, CL-17, CL-11", All weeks,7F:CP7
+,Ms. Priya Gupta,Group 1,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-16, CL-2, CL-19, CL-13, 5F:CP6, CL-21, Subject's classrooms, CL-11", All weeks,CL-11
+,Ms. Priya Gupta,Group 2,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-15, CL-22, CL-18, 7F:CP7, Subject's classrooms, CL-11, CL-3, 5F:CP6, 5F::CP5", All weeks,7F:CP7
+,Dr. Nilam,Entire class,CC,Single,2.0,Home classroom, All weeks,
+,Mr. Vinod Yadav,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06", All weeks,"403, 306, 404"
+,Mr. Manish Kumar Sharma,Group 2,ML Lab,Double,1.0,"Subject's classrooms, CL-21, CL-19, CL-18, CL-17, CL-11, CL-10", All weeks,CL-10
+,Ms. Priya Gupta,Entire class,DAA,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"306, 104, 103"
+,,,,,,,,
+5CS AI-B,,,,,32.0,,,
+,Ms. Neha Mathur,Group 2,CD Lab,Double,1.0,Subject's classrooms, All weeks,CL-17
+,Ms. Priya Gupta,Group 1,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-2, CL-16, CL-7, CL-3, 5F::CP5, CL-10, CL-13, CL-19, 5F:CP6, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, CL-18, 7F:CP7, Subject's classrooms", All weeks,CL-20
+,Ms. Priya Gupta,Group 2,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-16, CL-2, CL-17, Subject's classrooms", All weeks,CL-10
+,Ms. Nidhi Srivastav,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,7FL12 B
+,Ms. Neha Mathur,Group 1,CD Lab,Double,1.0,"CL-2, CL-3, CL-10, CL-14, CL-18, CL-19, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, CL-17", All weeks,CL-20
+,Mr. Manish Kumar Sharma,Entire class,ML,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Mr. Manish Kumar Sharma,Group 2,ML Lab,Double,1.0,"Subject's classrooms, CL-19, CL-18, CL-17, CL-21, 5F::CP5", All weeks,CL-18
+,Mr. Manish Kumar Sharma,Group 1,ML Lab,Double,1.0,"Subject's classrooms, CL-19, CL-18, CL-17, CL-21, 5F::CP5", All weeks,CL-19
+,Dr. Nilam,Entire class,CC,Single,2.0,Home classroom, All weeks,203
+,Mr. Vinod Yadav,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06", All weeks,"104, 203, 105"
+,Ms. Priya Gupta,Entire class,ITR V,Single,2.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 203", All weeks,203
+,Ms. Priya Gupta,Entire class,DAA,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"104, 103"
+,Ms. Neha Mathur,Entire class,AT& CD,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"103, 105, 306"
+,,,,,,,,
+5CS-DS-A,,,,,32.0,,,
+,Mr. Rajesh Rajaan,Group 1,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-13, 5F:CP6, CL-19, CL-17, CL-22, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-15, CL-11, CL-14, CL-21, CL-18, Subject's classrooms", All weeks,CL-20
+,Ms. Nikita Gautam,Group 2,ML Lab,Double,1.0,Subject's classrooms, All weeks,CL-19
+,Mr. Mahender Kumar Beniwal,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,7FL12 B
+,Dr. Megha Gupta,Group 2,CD Lab,Double,1.0,"CL-11, CL-15, CL-16, CL-22, CL-1, CL-13, 7F:CP7, CL-17, CL-20", All weeks,CL-17
+,MS.Suniti Chauhan,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"305, 403"
+,Dr. Chothmal Choudhary,Entire class,AT& CD,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Dr. Pankaj Dadheech,Entire class,ITR V,Single,2.0,Home classroom, All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Ms. Nikita Gautam,Group 1,ML Lab,Double,1.0,"5F:CP6, CL-20, Subject's classrooms, CL-21, CL-11, CL-18, CL-19", All weeks,CL-18
+,Mr. Rajesh Rajaan,Group 2,DAA Lab,Double,1.0,"Shared room, CL-20, CL-1, CL-19, 5F:CP6, CL-13, CL-16, CL-2, CL-21, Subject's classrooms, CL-11, CL-18, CL-3, CL-10, CL-14, 5F::CP5, CL-17", All weeks,CL-20
+,Dr. Pankaj Dadheech,Entire class,AI,Single,2.0,"Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,
+,Dr. Megha Gupta,Group 1,CD Lab,Double,1.0,"Subject's classrooms, CL-17, CL-15", All weeks,CL-15
+,Ms. Nikita Gautam,Entire class,ML,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"403, 404, 104"
+,Mr. Rajesh Rajaan,Entire class,DAA,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 203", All weeks,"203, 403, 406"
+,,,,,,,,
+5CS-DS-B,,,,,32.0,,,
+,Mr. Rajesh Rajaan,Group 1,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-13, 5F:CP6, CL-19, CL-17, CL-22, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-15, CL-11, CL-14, CL-21, CL-18, Subject's classrooms", All weeks,CL-10
+,Ms. Nidhi Srivastav,Group 1,CD Lab,Double,1.0,"5F:CP6, CL-20, Subject's classrooms", All weeks,CL-20
+,Ms. Nidhi Srivastav,Group 2,CD Lab,Double,1.0,Subject's classrooms, All weeks,CL-17
+,Mr. Rajesh Rajaan,Entire class,DAA,Single,3.0,Home classroom, All weeks,
+,Ms. Nikita Gautam,Entire class,ML,Single,3.0,Home classroom, All weeks,
+,Dr. Chothmal Choudhary,Entire class,AT& CD,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Ms. Nikita Gautam,Group 1,ML Lab,Double,1.0,"Subject's classrooms, CL-10, CL-21, CL-19, CL-18, CL-11, CL-17", All weeks,CL-18
+,Mr. Mahender Kumar Beniwal,Entire class,PPS( CRT),Double,3.0,Home classroom, All weeks,"5FL4-B, 7FL12 B"
+,Mr. Rajesh Rajaan,Group 2,DAA Lab,Double,1.0,"Shared room, CL-1, CL-20, CL-16, CL-2, CL-21, CL-19, Subject's classrooms, CL-11, 5F:CP6, 5F::CP5, 7F:CP7, CL-7, CL-15, CL-22, CL-17, CL-3, CL-10, CL-13, CL-14, CL-18", All weeks,CL-11
+,Dr. Pankaj Dadheech,Entire class,AI,Single,2.0,Home classroom, All weeks,
+,MS.Suniti Chauhan,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06", All weeks,"403, 103, 104"
+,Ms. Nikita Gautam,Group 2,ML Lab,Double,1.0,"Subject's classrooms, CL-10, CL-19, CL-18, CL-17", All weeks,CL-17
+,Mr. Rajesh Rajaan,Entire class,ITR V,Single,2.0,"Home classroom, 104, 301, 404", All weeks,404
+,,,,,,,,
+5CS-IOT,,,,,32.0,,,
+,Mr. Manish Bhardwaj,Group 2,ML Lab,Double,1.0,Subject's classrooms, All weeks,CL-19
+,Dr. Megha Gupta,Group 1,CD Lab,Double,1.0,"5F:CP6, CL-20, CL-18, 7F:CP7, Subject's classrooms", All weeks,CL-17
+,Dr. Megha Gupta,Group 2,CD Lab,Double,1.0,"5F:CP6, CL-20, 7F:CP7, Subject's classrooms", All weeks,CL-17
+,Dr.Namrata,Group 2,ESD lab,Double,1.0,"Shared room, CL-1, CL-20, CL-2, CL-16, CL-18, 7F:CP7, CL-15, CL-22", All weeks,CL-2
+,Dr.Namrata,Group 1,ESD lab,Double,1.0,"Shared room, CL-1, CL-20, CL-13, 5F:CP6, CL-19, CL-17, CL-22, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-15, CL-11, CL-14, CL-21, CL-18", All weeks,CL-2
+,Without teacher,Entire class,OE,Single,3.0,Home classroom, All weeks,
+,Without teacher,Entire class,Audit-V,Single,1.0,Home classroom, All weeks,
+,Mr. Manish Bhardwaj,Group 1,ML Lab,Double,1.0,"CL-3, CL-2, Subject's classrooms, CL-21, CL-19, CL-11, CL-18", All weeks,CL-18
+,Dr. Vinay Kanungo,Entire class,PPS( CRT),Double,3.0,5FL4-B, All weeks,5FL4-B
+,Ms. Neelam Jangir,Entire class,CaNS,Single,3.0,"103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,"105, 5FL4-B, 305"
+,Mr. Manish Bhardwaj,Entire class,ITR V,Single,2.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,404
+,Dr.Namrata,Entire class,ESD,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"406, 105"
+,Mr. Manish Bhardwaj,Entire class,ML,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"406, 305, 403"
+,Dr. Megha Gupta,Entire class,AT& CD,Single,3.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,"305, 403, 406"
+,Ms. Nidhi Srivastav,Entire class,AI,Single,2.0,"7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B, 406", All weeks,"5FL4-B, 406"
+,,,,,,,,
+7CSA,,,,,12.0,,,
+,Dr. Jyoti Singh,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, ECL-05, CL-16, CL-2, CL-7, 5F::CP5, CL-3, CL-13, CL-10, 5F:CP6, CL-1, CL-19, CL-15, CL-22, CL-11, CL-14, CL-21, CL-17, IAI, IAI Lab", All weeks,IAI Lab
+,Dr. Sunil Dhankhar,Group 2,CS Lab,Double,1.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, CL-11, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B", All weeks,CL-21
+,Dr. Sunil Dhankhar,Group 1,CS Lab,Double,1.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, CL-11, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B", All weeks,CL-21
+,Mr. Nitin Goyal,Group 1,IOT Lab,Double,1.0,"CL-3, CL-2, Subject's classrooms", All weeks,CL-2
+,Mr. Nitin Goyal,Group 2,IOT Lab,Double,1.0,"CL-3, CL-2, CL-1, CL-7, CL-10, 5F::CP5, 5F:CP6, CL-13, CL-16, CL-15, CL-22, CL-19, CL-11, CL-14, CL-21, CL-17, IAI, IAI Lab, CL-20, 7F:CP7, CL-18, Subject's classrooms", All weeks,CL-2
+,Dr. Yogendra Gupta,Entire class,IOT,Single,2.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B, FM Lab ME, 101, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,"CL-18, CL-17"
+,Mr. Arun Beniwal,Entire class,EEDM,Single,2.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B, FM Lab ME, 101, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,"CL-18, CL-17"
+,Dr. Aakriti Sharma,Entire class,ITR VII,Single,1.0,"Shared room, Home classroom, ECL-06", All weeks,ECL-06
+,Dr. Aakriti Sharma,Entire class,Seminar,Single,1.0,"Shared room, CL-14, CL-10, IAI, IAI Lab, Home classroom, ECL-06", All weeks,ECL-06
+,,,,,,,,
+7CSB,,,,,12.0,,,
+,Dr. Jyoti Singh,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, IAI, IAI Lab", All weeks,IAI
+,Dr. Sunil Dhankhar,Group 1,CS Lab,Double,1.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, CL-11, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B", All weeks,CL-21
+,Dr. Anjana Sangwan,Group 2,CS Lab,Double,1.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, CL-11, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B", All weeks,CL-21
+,Mr. Dinesh Kumar,Entire class,IOT,Single,2.0,"Shared room, Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,7FL:9
+,Mr. Dinesh Kumar,Group 1,IOT Lab,Double,1.0,"CL-3, CL-2, Subject's classrooms", All weeks,CL-2
+,Mr. Arun Beniwal,Entire class,EEDM,Single,2.0,"Shared room, Home classroom", All weeks,7FL:9
+,Mr. Nitin Goyal,Group 2,IOT Lab,Double,1.0,"CL-3, CL-2, Subject's classrooms", All weeks,CL-2
+,Mr. Pawan Kumar Patidar,Entire class,ITR VII,Single,1.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,7F:CP7
+,Mr. Pawan Kumar Patidar,Entire class,Seminar,Single,1.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,7F:CP7
+,,,,,,,,
+7CSC,,,,,12.0,,,
+,Dr. Jyoti Singh,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, IAI Lab, IAI", All weeks,IAI Lab
+,Dr. Anjana Sangwan,Group 2,CS Lab,Double,1.0,"Shared room, CL-18, CL-11, CL-21, CL-14", All weeks,CL-21
+,Dr. Anjana Sangwan,Group 1,CS Lab,Double,1.0,"Shared room, CL-18, CL-14, CL-7, CL-22, CL-16, CL-15, CL-11, CL-17, CL-2, CL-1, CL-3, CL-10, CL-13, CL-19, CL-20, CL-21, 5F::CP5, 5F:CP6, 7F:CP7", All weeks,CL-19
+,Mr. Dinesh Kumar,Group 1,IOT Lab,Double,1.0,"CL-3, CL-2, Subject's classrooms", All weeks,CL-2
+,Dr.Namrata,Group 2,IOT Lab,Double,1.0,"CL-3, CL-2, Subject's classrooms", All weeks,CL-3
+,Dr. Mehul Mahrishi,Entire class,Seminar,Single,1.0,"Shared room, CL-14, CL-13, 5F:CP6, CL-1, CL-19, CL-15, CL-10, IAI, IAI Lab, 406, CL-2, CL-3", All weeks,CL-2
+,Dr. Mehul Mahrishi,Entire class,ITR VII,Single,1.0,"Shared room, Home classroom, 406, IAI Lab, IAI, CL-2, CL-3", All weeks,CL-2
+,Mr. Vinod Kataria,Entire class,IOT,Single,2.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B, FM Lab ME, 101, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,"CL-18, 203"
+,Mr. Sanjay Bairwa,Entire class,EEDM,Single,2.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B, FM Lab ME, 101, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,"CL-18, 203"
+,,,,,,,,
+7CSD,,,,,12.0,,,
+,Mr. Manish Bhardwaj,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, IAI, IAI Lab", All weeks,IAI Lab
+,Mr. Vikash Dhankar,Group 1,CS Lab,Double,1.0,"Shared room, CL-18, CL-11, CL-14", All weeks,CL-18
+,Mr. Vikash Dhankar,Group 2,CS Lab,Double,1.0,"Shared room, CL-18, CL-11, CL-14, CL-7, CL-16, CL-15, CL-22, CL-17, CL-2, CL-1, CL-3, CL-10, CL-13, CL-19, CL-20, CL-21, 5F::CP5, 5F:CP6, 7F:CP7", All weeks,CL-18
+,Dr. Yogendra Gupta,Entire class,IOT,Single,2.0,"Shared room, Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,"ME-103, 104"
+,Mr. Sanjay Bairwa,Entire class,EEDM,Single,2.0,"Shared room, Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,"104, ME-103"
+,Dr.Namrata,Group 1,IOT Lab,Double,1.0,"CL-3, CL-2, Subject's classrooms", All weeks,CL-3
+,Dr.Namrata,Group 2,IOT Lab,Double,1.0,"CL-3, CL-2, Subject's classrooms", All weeks,CL-3
+,Mr. Shirish Nagar,Entire class,ITR VII,Single,1.0,"Shared room, Home classroom, 7F:CP7, CL-11", All weeks,CL-11
+,Mr. Shirish Nagar,Entire class,Seminar,Single,1.0,"Shared room, CL-14, CL-16, CL-2, CL-3, CL-7, CL-10, 5F::CP5, CL-13, 5F:CP6, CL-1, CL-19, CL-22, CL-11, CL-15, Home classroom, 7F:CP7", All weeks,CL-11
+,,,,,,,,
+7CSE,,,,,12.0,,,
+,Mr. Sumit Kumar,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, ECL-05, IAI, IAI Lab", All weeks,IAI Lab
+,Dr. Anjana Sangwan,Entire class,CS Lab,Double,1.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, CL-11, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, CL-13, CL-15, CL-7, CL-16, CL-22, CL-17, CL-1, 5F::CP5, 7F:CP7", All weeks,CL-15
+,Dr.Namrata,Entire class,IOT Lab,Double,1.0,"CL-3, CL-2, Subject's classrooms", All weeks,CL-3
+,Dr. Megha Gupta,Entire class,Seminar,Single,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, IAI Lab, IAI, Home classroom, CL-17, CL-18, CL-20, CL-21, 7F:CP7, ECL-06", All weeks,ECL-06
+,Dr. Megha Gupta,Entire class,ITR VII,Single,1.0,"CL-2, CL-3, CL-10, CL-14, CL-18, CL-19, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, CL-17, CL-16, CL-15, CL-13, CL-11, CL-7, CL-1, ECL-06", All weeks,ECL-06
+,Mr. Vinod Kataria,Entire class,IOT,Single,2.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,"203, CL-7"
+,Mr. Chandan Kumar,Entire class,EEDM,Single,2.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,"203, CL-7"
+,,,,,,,,
+7CS-AI-A,,,,,12.0,,,
+,Mr. Manish Bhardwaj,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, ECL-05, CL-16, CL-2, CL-3, CL-11, CL-14, CL-21, CL-13, 5F:CP6, CL-19, CL-1, CL-20, CL-15, IAI", All weeks,IAI
+,Dr. Nilam,Group 2,CV Lab,Double,1.0,"Shared room, CL-2, CL-3, CL-14, CL-11, CL-16, CL-21, CL-13, 5F:CP6, CL-19, CL-20, CL-1, CL-15", All weeks,CL-14
+,Dr. Mithelesh Arya,Group 2,D&aL,Double,1.0,"Shared room, CL-18, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, CL-19, 5F:CP6, CL-1, CL-22, CL-15, CL-14, CL-11, CL-21, CL-17, 7F:CP7, CL-20", All weeks,CL-20
+,Dr. Nilam,Group 1,CV Lab,Double,1.0,"CL-2, CL-3, CL-10, CL-14, CL-19, CL-18, CL-20, CL-21, 5F::CP5, 5F:CP6, IAI Lab, Central Lib, 7FL12 A, 7FL12 B, CL-13", All weeks,CL-14
+,Dr. Mithelesh Arya,Group 1,D&aL,Double,1.0,"Shared room, CL-18, CL-11, CL-14, CL-21, CL-7, CL-15, CL-22, CL-16, CL-17, CL-1, CL-2, CL-3, CL-13, CL-10, CL-19, CL-20, 5F::CP5, 5F:CP6, 7F:CP7", All weeks,CL-11
+,Dr. Mithelesh Arya,Entire class,DL,Single,2.0,"Shared room, Home classroom, 7FL:9, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B", All weeks,"ME-103, ME-302"
+,Dr. Megha Gupta,Entire class,Seminar,Single,1.0,"Shared room, CL-14, CL-21, CL-11, CL-15, CL-20, CL-1, CL-19, 5F:CP6, CL-13, CL-10, 5F::CP5, CL-3, CL-7, CL-2, CL-22, CL-17, CL-18, Home classroom", All weeks,ME-302
+,Mr. Chandra Mohan Kumar,Entire class,EEDM,Single,2.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,"CL-19, ME-103"
+,Dr. Megha Gupta,Entire class,ITR VII,Single,1.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,CL-19
+,,,,,,,,
+7CS-AI-B,,,,,12.0,,,
+,Mr. Manish Bhardwaj,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, ECL-05, CL-11, CL-14, CL-2, CL-3, CL-16, IAI Lab, IAI", All weeks,IAI
+,Dr. Mithelesh Arya,Group 1,D&aL,Double,1.0,"Shared room, CL-18, CL-11, CL-14, CL-21, CL-15, CL-16, CL-3, CL-2, 5F::CP5, CL-7, CL-10, 5F:CP6, CL-13, CL-19, CL-1, CL-22, 7F:CP7, CL-20, ECL-05, CL-17", All weeks,CL-20
+,Dr. Mithelesh Arya,Group 2,D&aL,Double,1.0,"Shared room, CL-18, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, 7F:CP7, CL-20", All weeks,CL-20
+,Dr. Mithelesh Arya,Entire class,DL,Single,2.0,"Shared room, Home classroom", All weeks,"ME-302, ME-103"
+,Dr. Nilam,Group 1,CV Lab,Double,1.0,"Shared room, CL-2, CL-3, CL-16, CL-14, CL-11, CL-13, 5F:CP6, CL-19, CL-1, CL-20, CL-15, CL-21, CL-7, 5F::CP5, CL-10, CL-22, CL-17, CL-18, 7F:CP7", All weeks,CL-14
+,Dr. Nilam,Group 2,CV Lab,Double,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, CL-18, 7F:CP7, CL-20", All weeks,CL-14
+,Mr. Chandra Mohan Kumar,Entire class,EEDM,Single,2.0,"Shared room, Home classroom", All weeks,"ME-103, ME-302"
+,Dr. Megha Gupta,Entire class,ITR VII,Single,1.0,"Shared room, Home classroom, 104, 105", All weeks,406
+,Dr. Megha Gupta,Entire class,Seminar,Single,1.0,"Shared room, CL-14, CL-22, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-20, CL-15, CL-11, CL-21, CL-17, IAI Lab, Home classroom, ME-103, ME-302, 203, 102, ECL-06, 5FL4-A, 5FL4-B, 7FL:9", All weeks,406
+,,,,,,,,
+7CS-DS-A,,,,,12.0,,,
+,Dr. Pankaj Dadheech,Group 1,SMA Lab,Double,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, CL-18, 7F:CP7, CL-20", All weeks,CL-11
+,Mr. Sumit Kumar,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, IAI, IAI Lab", All weeks,IAI
+,Ms Anamika Soni,Group 1,DV&ER Lab,Double,1.0,"Shared room, CL-18, CL-11, CL-14, CL-21, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-13, CL-10, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-17, 7F:CP7, CL-20, IAI Lab, IAI", All weeks,CL-10
+,Mr. Shivank Lavania,Entire class,Seminar,Single,1.0,"Shared room, CL-14, CL-22, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-20, CL-15, CL-11, CL-21, CL-17, CL-16, IAI, Home classroom", All weeks,CL-17
+,Ms Anamika Soni,Group 2,DV&ER Lab,Double,1.0,"Shared room, CL-18, IAI, 7F:CP7, CL-20, CL-10", All weeks,CL-10
+,Dr. Pankaj Dadheech,Group 2,SMA Lab,Double,1.0,"Shared room, CL-2, CL-3, CL-11, CL-14, CL-21, CL-20, CL-1, CL-19, 5F:CP6, CL-16, CL-7, 5F::CP5, CL-10, CL-13, CL-22, CL-15", All weeks,CL-11
+,Ms Anamika Soni,Entire class,DV-R,Single,2.0,"Shared room, Home classroom, CL-13, 5F:CP6, CL-19, 7FL:9, ME-103, 203, 102, ME-302, ECL-06, 5FL4-A, 5FL4-B, CL-10", All weeks,"ME-103, CL-10"
+,Mr. Shivank Lavania,Entire class,ITR VII,Single,1.0,"Shared room, Home classroom, CL-7, CL-10", All weeks,CL-10
+,Ms. Monika Khurana,Entire class,EEDM,Single,2.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,"ME-103, CL-17"
+,,,,,,,,
+7CS-DS-B,,,,,12.0,,,
+,Ms Anamika Soni,Group 1,DV&ER Lab,Double,1.0,"Shared room, CL-18, CL-11, CL-14, CL-21, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-13, CL-10, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-17, 7F:CP7, CL-20", All weeks,CL-10
+,Ms Anamika Soni,Group 2,DV&ER Lab,Double,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, CL-18", All weeks,CL-21
+,Dr. Chothmal Choudhary,Group 2,SMA Lab,Double,1.0,"Shared room, CL-2, CL-3, CL-11, CL-14, CL-21, CL-20, CL-1, CL-19, 5F:CP6, CL-16, CL-7, 5F::CP5, CL-10, CL-13, CL-22, CL-15", All weeks,CL-11
+,Mr. Sumit Kumar,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, ECL-05, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-13, 5F:CP6, CL-10, CL-19, CL-15, CL-22, CL-1, CL-11, CL-14, CL-21, CL-17, CL-18, 7F:CP7, CL-20, IAI, IAI Lab", All weeks,IAI
+,Dr. Chothmal Choudhary,Group 1,SMA Lab,Double,1.0,"Shared room, CL-2, CL-3, CL-15, CL-20, CL-1, CL-19, 5F:CP6, CL-13, CL-11, CL-14, CL-21", All weeks,CL-11
+,Dr. S. Sarabjeet Singh Sethi,Entire class,Seminar,Single,1.0,"Shared room, CL-14, CL-22, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-20, CL-15, CL-11, CL-21, CL-17, CL-16, IAI, 7F:CP7, CL-18, Home classroom, 102, 203, ME-302, ME-103, 7FL:9, ECL-06, 5FL4-A, 5FL4-B", All weeks,CL-3
+,Ms. Monika Khurana,Entire class,EEDM,Single,2.0,"Shared room, Home classroom, CL-7, CL-3", All weeks,"CL-3, 306"
+,Ms Anamika Soni,Entire class,DV-R,Single,2.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,"405, 306"
+,Dr. S. Sarabjeet Singh Sethi,Entire class,ITR VII,Single,1.0,"CL-13, CL-18, 5F:CP6, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406", All weeks,405
+,,,,,,,,
+7CS-IOT,,,,,12.0,,,
+,Mr. Vikash Dhankar,Group 2,CS Lab,Double,1.0,"Shared room, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, IAI Lab, CL-18, CL-20, 7F:CP7", All weeks,CL-16
+,Mr. Vikash Dhankar,Group 1,CS Lab,Double,1.0,"Shared room, CL-18, CL-11, CL-14, ECL-05, CL-10, CL-15, CL-7, CL-22, CL-16, CL-1, CL-17, CL-3, CL-2, CL-13, CL-19, CL-20, CL-21, 5F::CP5, 5F:CP6, 7F:CP7", All weeks,CL-19
+,Ms. Neelam Jangir,Group 2,FoDS Lab,Double,1.0,"Shared room, Home classroom, CL-16, CL-2, CL-3, CL-7, 5F::CP5, 5F:CP6, CL-13, CL-10, CL-19, CL-1, CL-22, CL-11, CL-15, CL-14, CL-21, CL-17, CL-18, 7F:CP7, CL-20", All weeks,5F:CP6
+,Mr.Vikram Khandelwal,Entire class,Project/Spoken-Latex,Double,1.0,"Shared room, ECL-05, CL-16, CL-3, CL-2, CL-7, 5F::CP5, CL-10, 5F:CP6, CL-13, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, IAI Lab, IAI", All weeks,IAI Lab
+,Mr. Pramod Jain,Entire class,EEDM,Single,2.0,"Shared room, Home classroom, CL-13, 5F:CP6, CL-19, CL-15", All weeks,"105, CL-15"
+,Ms. Rekha Bhatt,Entire class,"DSI
+oT",Single,2.0,"CL-13, 5F:CP6, CL-19, Shared room, 106, Home classroom, CL-15", All weeks,"CL-15, 105"
+,Ms. Neelam Jangir,Group 1,FoDS Lab,Double,1.0,"Shared room, Home classroom, CL-16, CL-2, CL-3, CL-7, 5F::CP5, CL-10, CL-13, 5F:CP6, CL-19, CL-1, CL-22, CL-15, CL-11, CL-14, CL-21, CL-17, ECL-05, 7F:CP7", All weeks,7F:CP7
+,Mr. Shivank Lavania,Entire class,ITR VII,Single,1.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,CL-19
+,Mr. Shivank Lavania,Entire class,Seminar,Single,1.0,"CL-1, CL-2, CL-3, CL-7, CL-10, CL-11, CL-13, CL-14, CL-15, CL-16, CL-17, CL-18, CL-19, CL-20, CL-21, CL-22, 5F::CP5, 5F:CP6, 7F:CP7, 7F:EE-Lab13, ECL-08, ECL-12, ECL-11, ECL-05, ECL-06, IAI Lab, IAI, Central Lib, 7FL12 A, 7FL12 B, APJ Seminar Hall, 6 FL8, Kautilya Seminar, 103, 104, 105, 106, 301, 302, 303, 304, 305, 306, 403, 404, 405, 406, 101, 102, 203, 7FL:9, ME-103, ME-302, 5FL4-A, 5FL4-B, FM Lab ME, Home classroom, Shared room, Teacher's classrooms, Subject's classrooms, Emergency:", All weeks,CL-19
+,,,,,,,,
+3EE ,,,,,8.0,,,
+,Ms. Neelam Jangir,Entire class,III Sem EE,Double,4.0,Home classroom, All weeks,
+,,,,,,,,
+M.tech III,,,,,21.0,,,
+,Respective Guide R. Guide,Entire class,Pre-Dissertation,Double,6.0,Home classroom, All weeks,
+,Dr. Mehul Mahrishi,Entire class,ADBMS,Single,3.0,"Shared room, Home classroom, CL-21", All weeks,CL-21
+,Dr. Deepak Kumar,Entire class,RM&IPR,Single,3.0,FM Lab ME, All weeks,FM Lab ME
+,Dr. Ankit Agrawal,Entire class,EMA,Single,3.0,"Home classroom, CL-21", All weeks,CL-21
+,,,,,,,,
+M.Tech I,,,,,0.0,,,
+,,,,,,,,
+Open Elective AI for EveryOne,,,,,3.0,,,
+,Mr. Shirish Nagar,Entire class,OE,Single,3.0,"Home classroom, IAI Lab, 7FL12 A, 7FL12 B", All weeks,7FL12 A

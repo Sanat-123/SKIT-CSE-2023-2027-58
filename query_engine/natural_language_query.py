@@ -1033,7 +1033,7 @@ class NaturalLanguageQuery:
         # -----------------------------------------------------
 
         result = self.call_engine_method(
-            "faculty_free",
+            "faculty_free_slots",
             day=day,
             slot=slot
         )
