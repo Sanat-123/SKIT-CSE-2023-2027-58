@@ -670,6 +670,107 @@ class FacultyAIChatbot:
         # --------------------------------------------------
         # USE EXISTING VALIDATED QUERY ENGINE
         # --------------------------------------------------
+                # --------------------------------------------------
+        # DETECT BUSY / OCCUPIED / UNAVAILABLE INTENT
+        # --------------------------------------------------
+
+        text = str(query).lower()
+
+        busy_words = (
+            "busy",
+            "occupied",
+            "unavailable",
+            "not available",
+        )
+
+        is_busy_intent = any(
+            word in text
+            for word in busy_words
+        )
+
+        if is_busy_intent:
+
+                        # Get the complete faculty roster from the existing
+                        # faculty records.
+                        all_records = self.query_engine._faculty_records()
+                        all_names = []
+
+                        for item in all_records:
+                            if not isinstance(item, dict):
+                                continue
+
+                            name = str(item.get("teacher", "")).strip()
+                            if name:
+                                all_names.append(name)
+
+                        # Remove duplicates.
+                        all_names = list(dict.fromkeys(all_names))
+
+                        busy_faculty = []
+
+                        for name in all_names:
+
+                            status_result = (
+                                self.query_engine.faculty_status_for_period(
+                                    name,
+                                    day,
+                                    start_time,
+                                    end_time
+                                )
+                            )
+
+                            if (
+                                isinstance(status_result, dict)
+                                and status_result.get("status") == "busy"
+                            ):
+                                busy_faculty.append(name)
+
+                        busy_faculty = list(
+                            dict.fromkeys(busy_faculty)
+                        )
+
+                        busy_faculty.sort(
+                            key=lambda x: x.lower()
+                        )
+
+                        if not busy_faculty:
+
+                            return (
+                                "No faculty members are busy on "
+                                f"{day} from {start_time} to {end_time}."
+                            )
+
+                        lines = []
+
+                        lines.append(
+                            f"Faculty members busy on {day} "
+                            f"from {start_time} to {end_time}:"
+                        )
+
+                        lines.append("")
+
+                        for index, teacher in enumerate(
+                            busy_faculty,
+                            start=1
+                        ):
+
+                            lines.append(
+                                f"{index}. {teacher}"
+                            )
+
+                        lines.append("")
+
+                        lines.append(
+                            f"Total faculty: {len(busy_faculty)}"
+                        )
+
+                        return "\n".join(lines)
+
+        # --------------------------------------------------
+        # EXISTING FREE-FACULTY LOGIC
+        # --------------------------------------------------
+
+        
 
         result = (
             self.query_engine.faculty_free_for_period(
