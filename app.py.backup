@@ -3,19 +3,20 @@
 UNISCHED AI - UNIVERSAL FREE SLOT CHATBOT
 ============================================================
 
-User uploads:
+User uploads one or more timetable files:
     PDF
     XLSX
     XLS
     CSV
 
 The application:
-    1. Imports the file
-    2. Detects the timetable structure
-    3. Creates canonical records
-    4. Builds the availability engine
-    5. Accepts natural-language questions
-    6. Returns timetable/free-slot answers
+    1. Imports every uploaded file
+    2. Detects each file's timetable structure
+    3. Combines all imported records into one dataset
+    4. Creates canonical records from the combined dataset
+    5. Builds ONE availability engine over that dataset
+    6. Accepts natural-language questions
+    7. Returns timetable/free-slot answers
 
 ============================================================
 """
@@ -81,8 +82,8 @@ st.subheader(
 )
 
 st.write(
-    "Upload a timetable PDF, Excel or CSV file and ask "
-    "questions in natural language."
+    "Upload one or more timetable PDF, Excel or CSV files "
+    "and ask questions in natural language."
 )
 
 
@@ -114,8 +115,8 @@ if "engine" not in st.session_state:
 if "nlp" not in st.session_state:
     st.session_state.nlp = None
 
-if "file_name" not in st.session_state:
-    st.session_state.file_name = ""
+if "file_names" not in st.session_state:
+    st.session_state.file_names = []
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -129,9 +130,10 @@ with st.sidebar:
 
     st.header("📁 Timetable Upload")
 
-    uploaded_file = st.file_uploader(
-        "Upload timetable",
-        type=SUPPORTED_TYPES
+    uploaded_files = st.file_uploader(
+        "Upload timetable(s)",
+        type=SUPPORTED_TYPES,
+        accept_multiple_files=True
     )
 
     st.markdown("---")
@@ -162,11 +164,17 @@ with st.sidebar:
 # FILE PROCESSING FUNCTION
 # ============================================================
 
-def process_uploaded_file(uploaded_file):
+def import_single_file(uploaded_file):
 
     """
-    Save uploaded Streamlit file temporarily and process it
+    Save ONE uploaded Streamlit file temporarily and import it
     through the existing ImportManager.
+
+    This function only performs the IMPORT step for a single
+    file. It deliberately does NOT build a CanonicalEventMatcher
+    or QueryEngine -- that happens once, after every uploaded
+    file's records have been combined (see
+    build_combined_dataset() below).
     """
 
     suffix = Path(
@@ -221,7 +229,8 @@ def process_uploaded_file(uploaded_file):
                         "error",
                         "File import failed."
                     ),
-                    "records": []
+                    "records": [],
+                    "warnings": []
                 }
 
             records = result.get(
@@ -253,40 +262,13 @@ def process_uploaded_file(uploaded_file):
                     "The file was imported but "
                     "no timetable records were found."
                 ),
-                "records": []
+                "records": [],
+                "warnings": warnings
             }
-
-
-        # ----------------------------------------------------
-        # Canonical matching
-        # ----------------------------------------------------
-
-        matcher = CanonicalEventMatcher(
-            records
-        )
-
-        matcher.match()
-
-
-        # ----------------------------------------------------
-        # Query engine
-        # ----------------------------------------------------
-
-        engine = QueryEngine(
-            matcher
-        )
-
-        nlp = NaturalLanguageQuery(
-            engine
-        )
-
 
         return {
             "success": True,
             "records": records,
-            "matcher": matcher,
-            "engine": engine,
-            "nlp": nlp,
             "warnings": warnings
         }
 
@@ -296,7 +278,8 @@ def process_uploaded_file(uploaded_file):
         return {
             "success": False,
             "message": str(e),
-            "records": []
+            "records": [],
+            "warnings": []
         }
 
 
@@ -317,22 +300,150 @@ def process_uploaded_file(uploaded_file):
 
 
 # ============================================================
+# COMBINE MULTIPLE UPLOADED FILES INTO ONE DATASET
+# ============================================================
+
+def build_combined_dataset(uploaded_files):
+
+    """
+    Import EVERY uploaded file, combine all of their records
+    into a single list, and build exactly ONE
+    CanonicalEventMatcher / QueryEngine / NaturalLanguageQuery
+    over that combined list.
+
+    A single uploaded file is simply the special case of this
+    same code path with one file in the list -- there is no
+    separate single-file pipeline.
+    """
+
+    all_records = []
+
+    all_warnings = []
+
+    file_reports = []
+
+    for uploaded_file in uploaded_files:
+
+        file_result = import_single_file(
+            uploaded_file
+        )
+
+        if file_result["success"]:
+
+            all_records.extend(
+                file_result["records"]
+            )
+
+            file_reports.append(
+                {
+                    "name": uploaded_file.name,
+                    "success": True,
+                    "record_count": len(
+                        file_result["records"]
+                    ),
+                }
+            )
+
+            for warning in file_result.get(
+                "warnings",
+                []
+            ):
+
+                all_warnings.append(
+                    f"{uploaded_file.name}: {warning}"
+                )
+
+        else:
+
+            file_reports.append(
+                {
+                    "name": uploaded_file.name,
+                    "success": False,
+                    "message": file_result.get(
+                        "message",
+                        "Unknown error"
+                    ),
+                }
+            )
+
+
+        # ------------------------------------------------
+        # No records from ANY uploaded file.
+        # ------------------------------------------------
+
+    if not all_records:
+
+        return {
+            "success": False,
+            "message": (
+                "None of the uploaded files produced any "
+                "timetable records."
+            ),
+            "records": [],
+            "file_reports": file_reports,
+        }
+
+
+    # ----------------------------------------------------
+    # Canonical matching -- ONE matcher over ALL combined
+    # records from every uploaded file.
+    # ----------------------------------------------------
+
+    matcher = CanonicalEventMatcher(
+        all_records
+    )
+
+    matcher.match()
+
+
+    # ----------------------------------------------------
+    # Query engine -- ONE engine / ONE NLP layer over the
+    # combined dataset.
+    # ----------------------------------------------------
+
+    engine = QueryEngine(
+        matcher
+    )
+
+    nlp = NaturalLanguageQuery(
+        engine
+    )
+
+
+    return {
+        "success": True,
+        "records": all_records,
+        "matcher": matcher,
+        "engine": engine,
+        "nlp": nlp,
+        "warnings": all_warnings,
+        "file_reports": file_reports,
+    }
+
+
+# ============================================================
 # PROCESS UPLOAD
 # ============================================================
 
-if uploaded_file:
+if uploaded_files:
+
+    current_file_names = [
+        uploaded_file.name
+        for uploaded_file in uploaded_files
+    ]
 
     if (
-        st.session_state.file_name
-        != uploaded_file.name
+        st.session_state.file_names
+        != current_file_names
     ):
 
         with st.spinner(
-            "Processing timetable..."
+            f"Processing {len(uploaded_files)} "
+            f"timetable file(s)..."
         ):
 
-            result = process_uploaded_file(
-                uploaded_file
+            result = build_combined_dataset(
+                uploaded_files
             )
 
 
@@ -354,17 +465,65 @@ if uploaded_file:
                 result["nlp"]
             )
 
-            st.session_state.file_name = (
-                uploaded_file.name
+            st.session_state.file_names = (
+                current_file_names
             )
 
             st.session_state.messages = []
 
 
             st.success(
-                f"Successfully loaded: "
-                f"{uploaded_file.name}"
+                f"Successfully loaded "
+                f"{len(current_file_names)} file(s): "
+                + ", ".join(current_file_names)
             )
+
+
+            # ------------------------------------------------
+            # Per-file import report
+            # ------------------------------------------------
+
+            file_reports = result.get(
+                "file_reports",
+                []
+            )
+
+            failed_reports = [
+                report
+                for report in file_reports
+                if not report["success"]
+            ]
+
+            with st.expander(
+                f"📄 File details "
+                f"({len(file_reports)} uploaded)"
+            ):
+
+                for report in file_reports:
+
+                    if report["success"]:
+
+                        st.write(
+                            f"✅ **{report['name']}** — "
+                            f"{report['record_count']} "
+                            f"record(s) imported"
+                        )
+
+                    else:
+
+                        st.write(
+                            f"❌ **{report['name']}** — "
+                            f"{report['message']}"
+                        )
+
+            if failed_reports:
+
+                st.warning(
+                    f"{len(failed_reports)} of "
+                    f"{len(file_reports)} file(s) could "
+                    f"not be imported. See file details "
+                    f"above."
+                )
 
 
             # ------------------------------------------------
@@ -453,6 +612,34 @@ if uploaded_file:
                 )
             )
 
+            file_reports = result.get(
+                "file_reports",
+                []
+            )
+
+            if file_reports:
+
+                with st.expander(
+                    "📄 File details"
+                ):
+
+                    for report in file_reports:
+
+                        if report["success"]:
+
+                            st.write(
+                                f"✅ **{report['name']}** — "
+                                f"{report['record_count']} "
+                                f"record(s) imported"
+                            )
+
+                        else:
+
+                            st.write(
+                                f"❌ **{report['name']}** — "
+                                f"{report['message']}"
+                            )
+
 
 # ============================================================
 # DATASET STATUS
@@ -479,12 +666,14 @@ if st.session_state.nlp:
     with col1:
 
         st.write(
-            "**File:**"
+            f"**Files ({len(st.session_state.file_names)}):**"
         )
 
-        st.write(
-            st.session_state.file_name
-        )
+        for file_name in st.session_state.file_names:
+
+            st.write(
+                f"- {file_name}"
+            )
 
     with col2:
 
@@ -620,8 +809,8 @@ if st.session_state.nlp:
 else:
 
     st.info(
-        "👈 Upload a timetable file from the sidebar "
-        "to start chatting."
+        "👈 Upload one or more timetable files from the "
+        "sidebar to start chatting."
     )
 
 

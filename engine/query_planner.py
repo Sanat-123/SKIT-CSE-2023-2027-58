@@ -47,6 +47,7 @@ class QueryPlanner:
 
         day = day_slot.get("day")
         slot = day_slot.get("slot")
+        time_range = day_slot.get("time_range")
 
         # ==================================================
         # FACULTY STATUS
@@ -343,32 +344,46 @@ class QueryPlanner:
                 return {
                     "count": 0,
                     "results": [],
-                    "message": (
-                        "Please specify a day."
-                    )
+                    "message": "Please specify a day."
                 }
 
-            # --------------------------------------------------
-            # Specific slot
-            #
-            # Example:
-            # Available faculty Monday Slot 3
-            # --------------------------------------------------
+            # ==================================================
+            # TIME RANGE
+            # ==================================================
+
+            if time_range:
+
+                start_time = time_range[0]
+                end_time = time_range[1]
+
+                result = query_engine.faculty_free_for_period(
+                    day=day,
+                    start_time=start_time,
+                    end_time=end_time,
+                    teacher=teacher
+                )
+
+                result["time_range"] = time_range
+
+                return result
+
+            # ==================================================
+            # SPECIFIC SLOT
+            # ==================================================
 
             if slot is not None:
 
-                return query_engine.faculty_free_slots(
+                result = query_engine.faculty_free_slots(
                     day=day,
                     slot=slot,
                     teacher=teacher
                 )
 
-            # --------------------------------------------------
-            # No slot
-            #
-            # Example:
-            # When is Dr. Abdul Naim Khan free on Saturday?
-            # --------------------------------------------------
+                return result
+
+            # ==================================================
+            # ENTIRE DAY
+            # ==================================================
 
             return query_engine.faculty_free_slots(
                 day=day,

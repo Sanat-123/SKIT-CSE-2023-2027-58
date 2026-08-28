@@ -1322,17 +1322,16 @@ def faculty_free_for_period(
     end_time: str
 ) -> Dict[str, Any]:
     """
-    Return all faculty members who are completely free
-    during the requested time range.
+    Return faculty members who are completely free during
+    the requested period.
+
+    IMPORTANT:
+    If both FACULTY_FREE_SLOT and SCHEDULED_EVENT exist
+    for the same faculty/day/slot, SCHEDULED_EVENT wins.
     """
 
-    start = self._time_to_minutes(
-        start_time
-    )
-
-    end = self._time_to_minutes(
-        end_time
-    )
+    start = self._time_to_minutes(start_time)
+    end = self._time_to_minutes(end_time)
 
     day_key = self._day(day)
 
@@ -1341,7 +1340,6 @@ def faculty_free_for_period(
         or end is None
         or end <= start
     ):
-
         return {
             "query_type": "faculty_free_period",
             "day": day_key,
@@ -1354,6 +1352,10 @@ def faculty_free_for_period(
 
     all_records = self._faculty_records()
 
+    # ---------------------------------------------------------
+    # Get all faculty names
+    # ---------------------------------------------------------
+
     teachers = sorted(
         {
             self._clean(
@@ -1363,9 +1365,7 @@ def faculty_free_for_period(
                     "faculty"
                 )
             )
-
             for record in all_records
-
             if self._clean(
                 self._get(
                     record,
@@ -1377,16 +1377,16 @@ def faculty_free_for_period(
         key=lambda x: x.casefold()
     )
 
-    # Determine slots in the requested range
+    # ---------------------------------------------------------
+    # Records overlapping requested period
+    # ---------------------------------------------------------
+
     requested_records = [
         record
-
         for record in all_records
-
         if self._day(
             record.get("day")
         ) == day_key
-
         and self._slot_overlaps_period(
             self._clean(
                 record.get("slot_time")
@@ -1396,14 +1396,16 @@ def faculty_free_for_period(
         )
     ]
 
+    # ---------------------------------------------------------
+    # Requested slots
+    # ---------------------------------------------------------
+
     requested_slots = sorted(
         {
             self._slot(
                 record.get("slot")
             )
-
             for record in requested_records
-
             if self._slot(
                 record.get("slot")
             ) is not None
@@ -1412,38 +1414,89 @@ def faculty_free_for_period(
 
     free_faculty = []
 
+    # ---------------------------------------------------------
+    # Check every faculty member
+    # ---------------------------------------------------------
+
     for teacher in teachers:
 
-        matching = [
-
+        teacher_records = [
             record
-
             for record in requested_records
-
             if self._normalize(
                 self._get(
                     record,
                     "teacher",
                     "faculty"
                 )
-            ) == self._normalize(
-                teacher
-            )
+            ) == self._normalize(teacher)
         ]
 
-        # No records for this teacher in requested period
-        if not matching:
+        if not teacher_records:
             continue
+
+        # -----------------------------------------------------
+        # Group records by slot
+        #
+        # This is the important correction.
+        # -----------------------------------------------------
+
+        records_by_slot = {}
+
+        for record in teacher_records:
+
+            slot = self._slot(
+                record.get("slot")
+            )
+
+            if slot is None:
+                continue
+
+            records_by_slot.setdefault(
+                slot,
+                []
+            ).append(record)
 
         is_free = True
 
-        for record in matching:
+        # -----------------------------------------------------
+        # Check every requested slot
+        # -----------------------------------------------------
 
-            if self._cell_is_busy(record):
+        for slot in requested_slots:
 
+            slot_records = records_by_slot.get(
+                slot,
+                []
+            )
+
+            # No record for this slot
+            #
+            # We cannot automatically call this FREE because
+            # there may be incomplete timetable information.
+            if not slot_records:
                 is_free = False
-
                 break
+
+            # -------------------------------------------------
+            # BUSY HAS PRIORITY
+            #
+            # If ANY scheduled/busy event exists for this
+            # faculty + day + slot, faculty is BUSY.
+            # -------------------------------------------------
+
+            slot_is_busy = any(
+                self._cell_is_busy(record)
+                for record in slot_records
+            )
+
+            if slot_is_busy:
+                is_free = False
+                break
+
+        # -----------------------------------------------------
+        # Faculty is completely free
+        # -----------------------------------------------------
 
         if is_free:
 

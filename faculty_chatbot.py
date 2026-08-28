@@ -15,6 +15,7 @@ from engine.response_generator import ResponseGenerator
 from import_engine.import_manager import ImportManager
 from data_engine.canonical_event_matcher import CanonicalEventMatcher
 from query_engine import QueryEngine
+from query_engine.natural_language_query import NaturalLanguageQuery
 
 
 class FacultyAIChatbot:
@@ -115,6 +116,11 @@ class FacultyAIChatbot:
         )
 
         print("Query Engine ready.")
+        self.nl_query = NaturalLanguageQuery(
+            self.query_engine
+        )
+
+        print("Natural Language Query Engine ready.")
 
         print("\n" + "=" * 70)
         print("KNOWLEDGE BASE LOADED SUCCESSFULLY")
@@ -390,22 +396,61 @@ class FacultyAIChatbot:
         return None
 
     def _extract_period_teacher(self, query):
-        """Resolve a specific faculty name from a period query to the canonical stored name."""
+        """Resolve a specific faculty name from a period query."""
+
         text = str(query).lower()
+
         try:
             names = self.query_engine._all_faculty_names()
         except Exception:
             names = []
 
+        # Remove titles from the query.
+        query_key = re.sub(
+            r"\b(?:dr|mr|mrs|ms|prof|professor)\.?\s*",
+            "",
+            text
+        )
+
+        # Remove common query words so only the faculty name remains.
+        query_key = re.sub(
+            r"\b(?:is|was|free|busy|available|on|from|between|to|at)\b",
+            " ",
+            query_key
+        )
+
+        query_key = re.sub(
+            r"\s+",
+            " ",
+            query_key
+        ).strip()
+
         for name in sorted(names, key=len, reverse=True):
-            key = self.query_engine._teacher_key(name)
-            if not key:
+
+            # Remove title from stored faculty name too.
+            name_key = re.sub(
+                r"\b(?:dr|mr|mrs|ms|prof|professor)\.?\s*",
+                "",
+                str(name).lower()
+            )
+
+            name_key = re.sub(
+                r"\s+",
+                " ",
+                name_key
+            ).strip()
+
+            if not name_key:
                 continue
-            # Compare the title-insensitive name against the query.
-            query_key = re.sub(r"\b(?:dr|mr|mrs|ms|prof|professor)\.?\s*", "", text)
-            query_key = re.sub(r"\s+", " ", query_key).strip()
-            if re.search(r"(?<![a-z])" + re.escape(key) + r"(?![a-z])", query_key):
+
+            if re.search(
+                r"(?<![a-z])"
+                + re.escape(name_key)
+                + r"(?![a-z])",
+                query_key
+            ):
                 return name
+
         return None
 
     # ======================================================
@@ -686,7 +731,6 @@ class FacultyAIChatbot:
 
         if not query:
             return "Please enter a query."
-
         # ==================================================
         # IMPORTANT:
         #

@@ -9,7 +9,7 @@ FILES = [
 ]
 
 
-def test_pdf_format(file_path, parser):
+def check_pdf_format(file_path, parser):
     print()
     print("=" * 80)
     print("FILE:", file_path)
@@ -120,7 +120,7 @@ def main():
 
         try:
 
-            results[file_path] = test_pdf_format(
+            results[file_path] = check_pdf_format(
                 file_path,
                 parser,
             )
