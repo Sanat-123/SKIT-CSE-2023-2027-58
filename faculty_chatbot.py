@@ -490,12 +490,10 @@ class FacultyAIChatbot:
     # PERIOD QUERY DETECTION
     # ======================================================
 
-    
-    def _is_faculty_period_query(self,query):
-
+    def _is_faculty_period_query(self, query):
         """
-        Detect whether the user is asking for faculty
-        availability over a time interval.
+        Detect whether the user is asking about faculty
+        availability/status over a time interval.
         """
 
         text = str(query).lower()
@@ -514,13 +512,20 @@ class FacultyAIChatbot:
             "who is free",
             "who is available",
             "available faculty",
-            "free faculty"
+            "free faculty",
         )
 
-        availability_words = (
+        status_words = (
             "free",
             "available",
-            "availability"
+            "availability",
+            "busy",
+            "occupied",
+            "unavailable",
+            "take duty",
+            "exam duty",
+            "can take",
+            "can handle",
         )
 
         has_faculty_reference = any(
@@ -528,9 +533,9 @@ class FacultyAIChatbot:
             for word in faculty_words
         )
 
-        has_availability = any(
+        has_status_reference = any(
             word in text
-            for word in availability_words
+            for word in status_words
         )
 
         has_time_range = bool(
@@ -538,12 +543,17 @@ class FacultyAIChatbot:
             and self._extract_time_range(query)[1]
         )
 
-        has_specific_teacher = self._extract_period_teacher(query) is not None
+        has_specific_teacher = (
+            self._extract_period_teacher(query) is not None
+        )
 
         return (
-            has_availability
+            has_status_reference
             and has_time_range
-            and (has_faculty_reference or has_specific_teacher)
+            and (
+                has_faculty_reference
+                or has_specific_teacher
+            )
         )
 
     # ======================================================
