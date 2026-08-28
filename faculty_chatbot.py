@@ -335,8 +335,36 @@ class FacultyAIChatbot:
 
             if start and end:
                 return start, end
+                    # --------------------------------------------------
+        # Pattern 4
+        #
+        # 13:30 to 15:30
+        # --------------------------------------------------
+
+        match = re.search(
+            r"\b"
+            r"(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)"
+            r"\s+to\s+"
+            r"(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)"
+            r"\b",
+            text
+        )
+
+        if match:
+
+            start = cls._normalize_time(
+                match.group(1)
+            )
+
+            end = cls._normalize_time(
+                match.group(2)
+            )
+
+            if start and end:
+                return start, end
 
         return None, None
+    
 
     # ======================================================
     # EXTRACT DAY
