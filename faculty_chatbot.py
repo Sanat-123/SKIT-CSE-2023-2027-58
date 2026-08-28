@@ -400,23 +400,19 @@ class FacultyAIChatbot:
 
         text = str(query).lower()
 
+        # Get canonical faculty names from the existing
+        # NaturalLanguageQuery object.
         try:
-            names = self.query_engine._all_faculty_names()
+            names = self.nl_query._known_teachers()
         except Exception:
             names = []
 
-        # Remove titles from the query.
+        # Remove common faculty titles from the query.
         query_key = re.sub(
             r"\b(?:dr|mr|mrs|ms|prof|professor)\.?\s*",
             "",
-            text
-        )
-
-        # Remove common query words so only the faculty name remains.
-        query_key = re.sub(
-            r"\b(?:is|was|free|busy|available|on|from|between|to|at)\b",
-            " ",
-            query_key
+            text,
+            flags=re.IGNORECASE
         )
 
         query_key = re.sub(
@@ -425,13 +421,20 @@ class FacultyAIChatbot:
             query_key
         ).strip()
 
-        for name in sorted(names, key=len, reverse=True):
+        # Check longest names first.
+        # This prevents "Dinesh Kumar" from matching
+        # before "Dinesh Kumar Sharma".
+        for name in sorted(
+            names,
+            key=lambda x: len(str(x)),
+            reverse=True
+        ):
 
-            # Remove title from stored faculty name too.
             name_key = re.sub(
                 r"\b(?:dr|mr|mrs|ms|prof|professor)\.?\s*",
                 "",
-                str(name).lower()
+                str(name),
+                flags=re.IGNORECASE
             )
 
             name_key = re.sub(
@@ -443,11 +446,13 @@ class FacultyAIChatbot:
             if not name_key:
                 continue
 
+            # Match the complete faculty name.
             if re.search(
                 r"(?<![a-z])"
                 + re.escape(name_key)
                 + r"(?![a-z])",
-                query_key
+                query_key,
+                re.IGNORECASE
             ):
                 return name
 
