@@ -14,8 +14,11 @@ from engine.response_generator import ResponseGenerator
 
 from import_engine.import_manager import ImportManager
 from data_engine.canonical_event_matcher import CanonicalEventMatcher
+from scheduling.workload_engine import FacultyWorkloadEngine
+from scheduling.absence_engine import FacultyAbsenceEngine
 from query_engine import QueryEngine
 from query_engine.natural_language_query import NaturalLanguageQuery
+
 
 
 class FacultyAIChatbot:
@@ -116,6 +119,18 @@ class FacultyAIChatbot:
         )
 
         print("Query Engine ready.")
+        self.workload_engine = FacultyWorkloadEngine(
+            self.query_engine
+        )
+
+        print("Workload Engine ready.")
+
+        self.absence_engine = FacultyAbsenceEngine(
+            self.query_engine
+        )
+
+        print("Absence Engine ready.")
+
         self.nl_query = NaturalLanguageQuery(
             self.query_engine
         )
@@ -180,14 +195,28 @@ class FacultyAIChatbot:
             )
 
             if not match:
-                return None
+                # ------------------------------------------
+                # Plain hour: HH
+                # Example: 9 -> 09:00
+                #          11 -> 11:00
+                # ------------------------------------------
 
-            hour = int(match.group(1))
-            minute = 0
-            meridiem = match.group(2)
+                match = re.fullmatch(
+                    r"(\d{1,2})",
+                    value
+                )
 
+                if not match:
+                    return None
+
+                hour = int(match.group(1))
+                minute = 0
+                meridiem = None
+            else:
+                hour = int(match.group(1))
+                minute = 0
+                meridiem = match.group(2)
         else:
-
             hour = int(match.group(1))
             minute = int(match.group(2))
             meridiem = match.group(3)
@@ -499,21 +528,26 @@ class FacultyAIChatbot:
         text = str(query).lower()
 
         faculty_words = (
-            "faculty",
-            "faculties",
-            "teacher",
-            "teachers",
-            "professor",
-            "professors",
-            "staff",
-            "sir",
-            "ma'am",
-            "madam",
-            "who is free",
-            "who is available",
-            "available faculty",
-            "free faculty",
-        )
+    "faculty",
+    "faculties",
+    "teacher",
+    "teachers",
+    "professor",
+    "professors",
+    "staff",
+    "sir",
+    "ma'am",
+    "madam",
+
+    "who is free",
+    "who is available",
+    "who should be assigned",
+    "who should take",
+    "who can take",
+
+    "available faculty",
+    "free faculty",
+)
 
         status_words = (
             "free",
@@ -666,10 +700,240 @@ class FacultyAIChatbot:
                 f"I could not determine the availability of {teacher} "
                 f"on {day} from {start_time} to {end_time}."
             )
+                  # --------------------------------------------------
+        # BUSY/FREE FACULTY LOGIC
+        # --------------------------------------------------
+
+        
+
+
+        # --------------------------------------------------
+        # EXAM DUTY RECOMMENDATION
+        # --------------------------------------------------
+
+        text = str(query).lower()
+
+        exam_duty_words = (
+            "exam duty",
+            "exam duties",
+            "exam invigilation",
+            "invigilation",
+            "assign duty",
+            "assigned duty",
+            "take duty",
+            "can take duty",
+            "who should be assigned",
+            "who should take",
+        )
+
+        is_exam_duty_intent = any(
+            phrase in text
+            for phrase in exam_duty_words
+        )
+
+        if is_exam_duty_intent:
+
+            try:
+
+                duty_result = (
+                    self.workload_engine.exam_duty_candidates(
+                        day,
+                        start_time,
+                        end_time
+                    )
+                )
+
+            except Exception as e:
+
+                return (
+                    "Unable to calculate exam-duty candidates.\n"
+                    f"Error: {e}"
+                )
+
+            if not isinstance(duty_result, dict):
+
+                return (
+                    "Unable to retrieve exam-duty candidates."
+                )
+
+            candidates = duty_result.get(
+                "results",
+                []
+            )
+
+            if not candidates:
+
+                return (
+                    f"No suitable faculty members were found "
+                    f"for exam duty on {day} from "
+                    f"{start_time} to {end_time}."
+                )
+
+            lines = []
+
+            lines.append(
+                f"Recommended faculty for exam duty on "
+                f"{day} from {start_time} to {end_time}:"
+            )
+
+            lines.append("")
+
+            for index, candidate in enumerate(
+                candidates,
+                start=1
+            ):
+
+                teacher = str(
+                    candidate.get(
+                        "teacher",
+                        ""
+                    )
+                ).strip()
+
+                daily_periods = candidate.get(
+                    "daily_periods",
+                    0
+                )
+
+                priority = candidate.get(
+                    "priority",
+                    ""
+                )
+
+                if not teacher:
+                    continue
+
+                lines.append(
+                    f"{index}. {teacher} — "
+                    f"{daily_periods} periods — "
+                    f"{priority} priority"
+                )
+
+            lines.append("")
+            lines.append(
+                f"Total candidates: {len(candidates)}"
+            )
+
+            return "\n".join(lines)
+
 
         # --------------------------------------------------
         # USE EXISTING VALIDATED QUERY ENGINE
         # --------------------------------------------------
+
+        
+        # --------------------------------------------------
+        # USE EXISTING VALIDATED QUERY ENGINE
+        # --------------------------------------------------
+                # --------------------------------------------------
+        # EXAM DUTY RECOMMENDATION
+        # --------------------------------------------------
+
+        text = str(query).lower()
+
+        exam_duty_words = (
+            "exam duty",
+            "exam duties",
+            "exam invigilation",
+            "invigilation",
+            "assign duty",
+            "assigned duty",
+            "take duty",
+            "can take duty",
+            "who should be assigned",
+            "who should take",
+        )
+
+        is_exam_duty_intent = any(
+            phrase in text
+            for phrase in exam_duty_words
+        )
+
+        if is_exam_duty_intent:
+
+            try:
+
+                duty_result = (
+                    self.workload_engine.exam_duty_candidates(
+                        day,
+                        start_time,
+                        end_time
+                    )
+                )
+
+            except Exception as e:
+
+                return (
+                    "Unable to calculate exam-duty candidates.\n"
+                    f"Error: {e}"
+                )
+
+            if not isinstance(duty_result, dict):
+
+                return (
+                    "Unable to retrieve exam-duty candidates."
+                )
+
+            candidates = duty_result.get(
+                "results",
+                []
+            )
+
+            if not candidates:
+
+                return (
+                    f"No suitable faculty members were found "
+                    f"for exam duty on {day} from "
+                    f"{start_time} to {end_time}."
+                )
+
+            lines = []
+
+            lines.append(
+                f"Recommended faculty for exam duty on "
+                f"{day} from {start_time} to {end_time}:"
+            )
+
+            lines.append("")
+
+            for index, candidate in enumerate(
+                candidates,
+                start=1
+            ):
+
+                teacher = str(
+                    candidate.get(
+                        "teacher",
+                        ""
+                    )
+                ).strip()
+
+                daily_periods = candidate.get(
+                    "daily_periods",
+                    0
+                )
+
+                priority = candidate.get(
+                    "priority",
+                    ""
+                )
+
+                if not teacher:
+                    continue
+
+                lines.append(
+                    f"{index}. {teacher} "
+                    f"— {daily_periods} periods "
+                    f"— {priority} priority"
+                )
+
+            lines.append("")
+
+            lines.append(
+                f"Total candidates: {len(candidates)}"
+            )
+
+            return "\n".join(lines)
                 # --------------------------------------------------
         # DETECT BUSY / OCCUPIED / UNAVAILABLE INTENT
         # --------------------------------------------------
@@ -690,81 +954,55 @@ class FacultyAIChatbot:
 
         if is_busy_intent:
 
-                        # Get the complete faculty roster from the existing
-                        # faculty records.
-                        all_records = self.query_engine._faculty_records()
-                        all_names = []
+            # Get the complete faculty roster from the existing faculty records.
+            all_records = self.query_engine._faculty_records()
+            all_names = []
 
-                        for item in all_records:
-                            if not isinstance(item, dict):
-                                continue
+            for item in all_records:
+                if not isinstance(item, dict):
+                    continue
 
-                            name = str(item.get("teacher", "")).strip()
-                            if name:
-                                all_names.append(name)
+                name = str(item.get("teacher", "")).strip()
+                if name:
+                    all_names.append(name)
 
-                        # Remove duplicates.
-                        all_names = list(dict.fromkeys(all_names))
+            all_names = list(dict.fromkeys(all_names))
+            busy_faculty = []
 
-                        busy_faculty = []
+            for name in all_names:
+                status_result = self.query_engine.faculty_status_for_period(
+                    name,
+                    day,
+                    start_time,
+                    end_time
+                )
 
-                        for name in all_names:
+                if (
+                    isinstance(status_result, dict)
+                    and status_result.get("status") == "busy"
+                ):
+                    busy_faculty.append(name)
 
-                            status_result = (
-                                self.query_engine.faculty_status_for_period(
-                                    name,
-                                    day,
-                                    start_time,
-                                    end_time
-                                )
-                            )
+            busy_faculty = list(dict.fromkeys(busy_faculty))
+            busy_faculty.sort(key=lambda x: x.lower())
 
-                            if (
-                                isinstance(status_result, dict)
-                                and status_result.get("status") == "busy"
-                            ):
-                                busy_faculty.append(name)
+            if not busy_faculty:
+                return (
+                    "No faculty members are busy on "
+                    f"{day} from {start_time} to {end_time}."
+                )
 
-                        busy_faculty = list(
-                            dict.fromkeys(busy_faculty)
-                        )
+            lines = [
+                f"Faculty members busy on {day} "
+                f"from {start_time} to {end_time}:",
+                ""
+            ]
 
-                        busy_faculty.sort(
-                            key=lambda x: x.lower()
-                        )
+            for index, teacher in enumerate(busy_faculty, start=1):
+                lines.append(f"{index}. {teacher}")
 
-                        if not busy_faculty:
-
-                            return (
-                                "No faculty members are busy on "
-                                f"{day} from {start_time} to {end_time}."
-                            )
-
-                        lines = []
-
-                        lines.append(
-                            f"Faculty members busy on {day} "
-                            f"from {start_time} to {end_time}:"
-                        )
-
-                        lines.append("")
-
-                        for index, teacher in enumerate(
-                            busy_faculty,
-                            start=1
-                        ):
-
-                            lines.append(
-                                f"{index}. {teacher}"
-                            )
-
-                        lines.append("")
-
-                        lines.append(
-                            f"Total faculty: {len(busy_faculty)}"
-                        )
-
-                        return "\n".join(lines)
+            lines.extend(("", f"Total faculty: {len(busy_faculty)}"))
+            return "\n".join(lines)
 
         # --------------------------------------------------
         # EXISTING FREE-FACULTY LOGIC
@@ -869,26 +1107,1091 @@ class FacultyAIChatbot:
     # PROCESS QUERY
     # ======================================================
 
+        # ======================================================
+    # WORKLOAD RANK EXTRACTION
+    # ======================================================
+
+    def _extract_workload_rank(self, query):
+
+        text = str(query).lower().strip()
+
+        # Explicit ordinal words
+        rank_words = {
+            "first": 1,
+            "1st": 1,
+            "second": 2,
+            "2nd": 2,
+            "third": 3,
+            "3rd": 3,
+            "fourth": 4,
+            "4th": 4,
+            "fifth": 5,
+            "5th": 5,
+            "sixth": 6,
+            "6th": 6,
+            "seventh": 7,
+            "7th": 7,
+            "eighth": 8,
+            "8th": 8,
+            "ninth": 9,
+            "9th": 9,
+            "tenth": 10,
+            "10th": 10,
+        }
+
+        for word, rank in rank_words.items():
+
+            if re.search(
+                rf"\b{re.escape(word)}\b",
+                text
+            ):
+                return rank
+
+        # If no explicit rank is mentioned,
+        # treat the query as first/highest/lowest.
+        return 1
+
+
+    # ======================================================
+    # PROCESS QUERY
+    # ======================================================
+
+    
+
     def process_query(self, query):
 
         query = str(query).strip()
 
         if not query:
             return "Please enter a query."
+       
+
+        # --------------------------------------------------
+        # EXAM DUTY / INVIGILATION
+        # --------------------------------------------------
+
+        text = str(query).lower()
+
+        exam_duty_words = (
+            "exam duty",
+            "exam duties",
+            "exam invigilation",
+            "invigilation",
+            "invigilator",
+            "invigilators",
+            "assign duty",
+            "assigned duty",
+            "take duty",
+            "can take duty",
+            "who should be assigned",
+            "who should take",
+        )
+
+        is_exam_duty_intent = any(
+            phrase in text
+            for phrase in exam_duty_words
+        )
+
+        if is_exam_duty_intent:
+
+            day = self._extract_day(query)
+
+            start_time, end_time = (
+                self._extract_time_range(query)
+            )
+
+            if not day:
+                return (
+                    "Please specify a day for the exam duty, "
+                    "for example Monday."
+                )
+
+            if not start_time or not end_time:
+                return (
+                    "Please specify a complete time range for "
+                    "the exam duty, for example 09:00 to 11:00."
+                )
+
+            # --------------------------------------------------
+            # EXTRACT REQUESTED FACULTY COUNT
+            # --------------------------------------------------
+
+            count_patterns = (
+                r"\bassign\s+(\d+)\s+"
+                r"(?:faculty|faculties|teachers|professors|"
+                r"staff|invigilators?)\b",
+
+                r"\bneed\s+(\d+)\s+"
+                r"(?:faculty|faculties|teachers|professors|"
+                r"staff|invigilators?)\b",
+
+                r"\b(\d+)\s+"
+                r"(?:faculty|faculties|teachers|professors|"
+                r"staff|invigilators?)\b",
+
+                r"\bassign\s+(\d+)\b",
+
+                r"\bneed\s+(\d+)\b",
+            )
+
+            required_count = None
+
+            for pattern in count_patterns:
+
+                match = re.search(pattern, text)
+
+                if match:
+                    try:
+                        required_count = int(match.group(1))
+                    except ValueError:
+                        required_count = None
+                    break
+
+            # --------------------------------------------------
+            # ACTUAL ASSIGNMENT
+            # --------------------------------------------------
+
+            if required_count is not None:
+
+                if required_count <= 0:
+                    return (
+                        "The number of faculty to assign "
+                        "must be greater than zero."
+                    )
+
+                try:
+                    duty_result = (
+                        self.workload_engine.assign_exam_duty(
+                            day,
+                            start_time,
+                            end_time,
+                            required_count
+                        )
+                    )
+                except Exception as e:
+                    return (
+                        "Unable to assign exam duty.\n"
+                        f"Error: {e}"
+                    )
+
+                if not isinstance(duty_result, dict):
+                    return (
+                        "Unable to retrieve the exam-duty "
+                        "assignment result."
+                    )
+
+                assigned = duty_result.get("results", [])
+                success = duty_result.get("success", False)
+
+                if not assigned:
+                    return (
+                        f"No suitable faculty members were found "
+                        f"for exam duty on {day} from "
+                        f"{start_time} to {end_time}."
+                    )
+
+                lines = []
+
+                if success:
+                    lines.append(
+                        f"Exam duty assigned successfully on "
+                        f"{day} from {start_time} to {end_time}."
+                    )
+                else:
+                    lines.append(
+                        f"Exam-duty assignment result for "
+                        f"{day} from {start_time} to {end_time}:"
+                    )
+
+                lines.append("")
+
+                for index, candidate in enumerate(assigned, start=1):
+
+                    teacher = str(
+                        candidate.get("teacher", "")
+                    ).strip()
+
+                    daily_periods = candidate.get(
+                        "daily_periods", 0
+                    )
+
+                    priority = candidate.get(
+                        "priority", ""
+                    )
+
+                    if not teacher:
+                        continue
+
+                    lines.append(
+                        f"{index}. {teacher} — "
+                        f"{daily_periods} periods — "
+                        f"{priority} priority"
+                    )
+
+                lines.append("")
+                lines.append(
+                    f"Assigned: {len(assigned)} / {required_count}"
+                )
+
+                return "\n".join(lines)
+
+            # --------------------------------------------------
+            # RECOMMENDATION ONLY
+            # --------------------------------------------------
+
+            try:
+                duty_result = (
+                    self.workload_engine.exam_duty_candidates(
+                        day,
+                        start_time,
+                        end_time
+                    )
+                )
+            except Exception as e:
+                return (
+                    "Unable to calculate exam-duty candidates.\n"
+                    f"Error: {e}"
+                )
+
+            if not isinstance(duty_result, dict):
+                return (
+                    "Unable to retrieve exam-duty candidates."
+                )
+
+            candidates = duty_result.get("results", [])
+
+            if not candidates:
+                return (
+                    f"No suitable faculty members were found "
+                    f"for exam duty on {day} from "
+                    f"{start_time} to {end_time}."
+                )
+
+            lines = []
+
+            lines.append(
+                f"Recommended faculty for exam duty on "
+                f"{day} from {start_time} to {end_time}:"
+            )
+
+            lines.append("")
+
+            for index, candidate in enumerate(candidates, start=1):
+
+                teacher = str(
+                    candidate.get("teacher", "")
+                ).strip()
+
+                daily_periods = candidate.get(
+                    "daily_periods", 0
+                )
+
+                priority = candidate.get(
+                    "priority", ""
+                )
+
+                if not teacher:
+                    continue
+
+                lines.append(
+                    f"{index}. {teacher} — "
+                    f"{daily_periods} periods — "
+                    f"{priority} priority"
+                )
+
+                return "\n".join(lines)
+                    # ==================================================
+        # ABSENT FACULTY / REPLACEMENT QUERY
         # ==================================================
-        # IMPORTANT:
-        #
-        # Handle natural-language faculty PERIOD queries
-        # before the old pipeline.
-        #
-        # This fixes:
-        #
-        # "Who is free on Monday between 9:15 and 11:15?"
-        #
-        # "Which faculty are available Monday from 9:15
-        #  to 11:15?"
-        #
-        # without hard-coding faculty names.
+
+        absence_words = (
+            "absent",
+            "absence",
+            "substitute",
+            "substitution",
+            "replacement",
+            "replace",
+            "cover the class",
+            "cover class",
+            "cover for",
+        )
+
+        is_absence_intent = any(
+            phrase in text
+            for phrase in absence_words
+        )
+
+        if is_absence_intent:
+
+            day = self._extract_day(query)
+
+            if not day:
+                return (
+                    "Please specify a day, for example Monday."
+                )
+
+            teacher = self._extract_period_teacher(query)
+
+            if not teacher:
+                return (
+                    "Please specify the absent faculty member, "
+                    "for example Mr. Rajesh Rajaan."
+                )
+
+            # --------------------------------------------------
+            # FIND CLASSES OF ABSENT FACULTY
+            # --------------------------------------------------
+
+            if any(
+                phrase in text
+                for phrase in (
+                    "what classes",
+                    "which classes",
+                    "classes affected",
+                    "affected classes",
+                    "classes will be affected",
+                    "classes are affected",
+                    "what periods",
+                    "which periods",
+                    "periods affected",
+                )
+            ):
+
+                try:
+
+                    result = (
+                        self.absence_engine.absent_faculty_classes(
+                            teacher,
+                            day
+                        )
+                    )
+
+                except Exception as e:
+
+                    return (
+                        "Unable to retrieve the classes of the "
+                        "absent faculty.\n"
+                        f"Error: {e}"
+                    )
+
+                classes = result.get(
+                    "classes",
+                    []
+                )
+
+                if not classes:
+
+                    return (
+                        f"{teacher} has no scheduled classes "
+                        f"on {day}."
+                    )
+
+                lines = [
+                    f"Classes affected by the absence of "
+                    f"{teacher} on {day}:",
+                    ""
+                ]
+
+                for index, cls in enumerate(
+                    classes,
+                    start=1
+                ):
+
+                    slot = cls.get(
+                        "slot",
+                        ""
+                    )
+
+                    slot_time = str(
+                        cls.get(
+                            "slot_time",
+                            ""
+                        )
+                    ).strip()
+
+                    subject = str(
+                        cls.get(
+                            "subject",
+                            ""
+                        )
+                    ).strip()
+
+                    class_name = str(
+                        cls.get(
+                            "class_name",
+                            ""
+                        )
+                    ).strip()
+
+                    group_name = str(
+                        cls.get(
+                            "group_name",
+                            ""
+                        )
+                    ).strip()
+
+                    room = str(
+                        cls.get(
+                            "room",
+                            ""
+                        )
+                    ).strip()
+
+                    details = []
+
+                    if class_name:
+                        details.append(
+                            class_name
+                        )
+
+                    if group_name:
+                        details.append(
+                            group_name
+                        )
+
+                    if subject:
+                        details.append(
+                            subject
+                        )
+
+                    class_details = " | ".join(
+                        details
+                    )
+
+                    if slot:
+                        slot_text = (
+                            f"Slot {slot}"
+                        )
+                    else:
+                        slot_text = "Slot"
+
+                    if slot_time:
+                        slot_text += (
+                            f" ({slot_time})"
+                        )
+
+                    line = (
+                        f"{index}. {slot_text}"
+                    )
+
+                    if class_details:
+                        line += (
+                            f" — {class_details}"
+                        )
+
+                    if room:
+                        line += (
+                            f" — Room: {room}"
+                        )
+
+                    lines.append(line)
+
+                lines.append("")
+
+                lines.append(
+                    f"Total affected classes: "
+                    f"{len(classes)}"
+                )
+
+                return "\n".join(lines)
+
+            # --------------------------------------------------
+            # FIND REPLACEMENT FACULTY
+            # --------------------------------------------------
+
+            if any(
+                phrase in text
+                for phrase in (
+                    "substitute",
+                    "substitution",
+                    "replacement",
+                    "replace",
+                    "who can cover",
+                    "who can take",
+                    "who should take",
+                    "cover the class",
+                    "cover class",
+                )
+            ):
+
+                try:
+
+                    result = (
+                        self.absence_engine.replacement_candidates(
+                            teacher,
+                            day
+                        )
+                    )
+
+                except Exception as e:
+
+                    return (
+                        "Unable to calculate replacement "
+                        "faculty.\n"
+                        f"Error: {e}"
+                    )
+
+                candidates = result.get(
+                    "results",
+                    []
+                )
+
+                if not candidates:
+
+                    return (
+                        f"No suitable replacement faculty "
+                        f"were found for {teacher} on {day}."
+                    )
+
+                lines = [
+                    f"Replacement faculty for {teacher} "
+                    f"on {day}:",
+                    ""
+                ]
+
+                for index, candidate in enumerate(
+                    candidates,
+                    start=1
+                ):
+
+                    replacement = str(
+                        candidate.get(
+                            "replacement_teacher",
+                            ""
+                        )
+                    ).strip()
+
+                    slot = candidate.get(
+                        "slot",
+                        ""
+                    )
+
+                    slot_time = str(
+                        candidate.get(
+                            "slot_time",
+                            ""
+                        )
+                    ).strip()
+
+                    subject = str(
+                        candidate.get(
+                            "subject",
+                            ""
+                        )
+                    ).strip()
+
+                    class_name = str(
+                        candidate.get(
+                            "class_name",
+                            ""
+                        )
+                    ).strip()
+
+                    group_name = str(
+                        candidate.get(
+                            "group_name",
+                            ""
+                        )
+                    ).strip()
+
+                    if not replacement:
+                        continue
+
+                    details = []
+
+                    if class_name:
+                        details.append(
+                            class_name
+                        )
+
+                    if group_name:
+                        details.append(
+                            group_name
+                        )
+
+                    if subject:
+                        details.append(
+                            subject
+                        )
+
+                    class_details = " | ".join(
+                        details
+                    )
+
+                    line = (
+                        f"{index}. {replacement}"
+                    )
+
+                    if slot:
+                        line += (
+                            f" — Slot {slot}"
+                        )
+
+                    if slot_time:
+                        line += (
+                            f" ({slot_time})"
+                        )
+
+                    if class_details:
+                        line += (
+                            f" — {class_details}"
+                        )
+
+                    lines.append(line)
+
+                lines.append("")
+
+                lines.append(
+                    f"Total replacement options: "
+                    f"{len(candidates)}"
+                )
+
+                return "\n".join(lines)
+
+            # --------------------------------------------------
+            # GENERAL ABSENCE QUERY
+            # --------------------------------------------------
+
+            try:
+
+                result = (
+                    self.absence_engine.absent_faculty_classes(
+                        teacher,
+                        day
+                    )
+                )
+
+            except Exception as e:
+
+                return (
+                    "Unable to process the absence query.\n"
+                    f"Error: {e}"
+                )
+
+            classes = result.get(
+                "classes",
+                []
+            )
+
+            if not classes:
+
+                return (
+                    f"{teacher} has no scheduled classes "
+                    f"on {day}."
+                )
+
+            lines = [
+                f"{teacher} has {len(classes)} scheduled "
+                f"class(es) on {day}.",
+                "",
+                "Affected classes:"
+            ]
+
+            for index, cls in enumerate(
+                classes,
+                start=1
+            ):
+
+                subject = str(
+                    cls.get(
+                        "subject",
+                        ""
+                    )
+                ).strip()
+
+                class_name = str(
+                    cls.get(
+                        "class_name",
+                        ""
+                    )
+                ).strip()
+
+                slot = cls.get(
+                    "slot",
+                    ""
+                )
+
+                details = []
+
+                if class_name:
+                    details.append(
+                        class_name
+                    )
+
+                if subject:
+                    details.append(
+                        subject
+                    )
+
+                details_text = " | ".join(
+                    details
+                )
+
+                if details_text:
+                    lines.append(
+                        f"{index}. Slot {slot} — "
+                        f"{details_text}"
+                    )
+                else:
+                    lines.append(
+                        f"{index}. Slot {slot}"
+                    )
+
+            return "\n".join(lines)
+                    # ==================================================
+        # FACULTY WORKLOAD QUERY
+        # ==================================================
+
+        text = str(query).lower()
+
+        workload_words = (
+            "workload",
+            "work load",
+            "periods",
+            "teaching load",
+            "classes",
+            "class",
+        )
+
+        is_workload_intent = any(
+            phrase in text
+            for phrase in workload_words
+        )
+
+        if is_workload_intent:
+
+            day = self._extract_day(query)
+                                   # --------------------------------------------------
+            # WEEKLY WORKLOAD
+            # --------------------------------------------------
+
+            weekly_words = (
+                "weekly",
+                "this week",
+                "for the week",
+                "week's",
+                "week workload",
+                "weekly workload",
+            )
+
+            is_weekly_workload = any(
+                phrase in text
+                for phrase in weekly_words
+            )
+
+            if is_weekly_workload:
+
+                teacher = self._extract_period_teacher(query)
+
+                if not teacher:
+                    return (
+                        "Please specify a faculty member, "
+                        "for example Mr. Rajesh Rajaan."
+                    )
+
+                result = (
+                    self.workload_engine.weekly_workload(
+                        teacher
+                    )
+                )
+
+                total_periods = result.get(
+                    "total_periods",
+                    0
+                )
+
+                by_day = result.get(
+                    "by_day",
+                    {}
+                )
+
+                lines = [
+                    f"Weekly workload of {teacher}:",
+                    ""
+                ]
+
+                day_order = (
+                    "monday",
+                    "tuesday",
+                    "wednesday",
+                    "thursday",
+                    "friday",
+                    "saturday",
+                    "sunday",
+                )
+
+                for current_day in day_order:
+
+                    if current_day in by_day:
+
+                        periods = by_day[current_day]
+
+                        lines.append(
+                            f"{current_day.capitalize()}: "
+                            f"{periods} periods"
+                        )
+
+                lines.append("")
+                lines.append(
+                    f"Total weekly periods: {total_periods}"
+                )
+
+                return "\n".join(lines)
+
+                        # --------------------------------------------------
+            # LOWEST WORKLOAD / RANKED LOWEST WORKLOAD
+            # --------------------------------------------------
+
+            if any(
+                phrase in text
+                for phrase in (
+                    "lowest workload",
+                    "least workload",
+                    "minimum workload",
+                    "lowest load",
+                    "least load",
+                    "fewest periods",
+                    "minimum periods",
+                    "fewest classes",
+                    "least classes",
+                )
+            ):
+
+                if not day:
+                    return (
+                        "Please specify a day, for example Monday."
+                    )
+
+                results = (
+                    self.workload_engine.lowest_workload(
+                        day,
+                        limit=1000
+                    )
+                )
+
+                if not results:
+                    return (
+                        f"No workload data found for {day}."
+                    )
+
+                rank = self._extract_workload_rank(query)
+
+                results = sorted(
+                    results,
+                    key=lambda x: (
+                        x["periods"],
+                        x["teacher"].lower()
+                    )
+                )
+
+                ranked_periods = sorted(
+                    set(
+                        item["periods"]
+                        for item in results
+                    )
+                )
+
+                if rank > len(ranked_periods):
+                    return (
+                        f"There are only "
+                        f"{len(ranked_periods)} workload levels "
+                        f"on {day}."
+                    )
+
+                target_periods = ranked_periods[rank - 1]
+
+                ranked_faculty = [
+                    item
+                    for item in results
+                    if item["periods"] == target_periods
+                ]
+
+                rank_names = {
+                    1: "lowest",
+                    2: "second lowest",
+                    3: "third lowest",
+                    4: "fourth lowest",
+                    5: "fifth lowest",
+                }
+
+                rank_text = rank_names.get(
+                    rank,
+                    f"{rank}th lowest"
+                )
+
+                lines = [
+                    f"Faculty with the {rank_text} "
+                    f"workload on {day}:",
+                    ""
+                ]
+
+                for index, item in enumerate(
+                    ranked_faculty,
+                    start=1
+                ):
+                    lines.append(
+                        f"{index}. {item['teacher']} — "
+                        f"{item['periods']} periods"
+                    )
+
+                return "\n".join(lines)
+
+                        # --------------------------------------------------
+            # HIGHEST WORKLOAD / RANKED HIGHEST WORKLOAD
+            # --------------------------------------------------
+
+            if any(
+                phrase in text
+                for phrase in (
+                    "highest workload",
+                    "maximum workload",
+                    "highest load",
+                    "maximum load",
+                    "most periods",
+                    "maximum periods",
+                    "most classes",
+                    "maximum classes",
+                )
+            ):
+
+                if not day:
+                    return (
+                        "Please specify a day, for example Monday."
+                    )
+
+                results = (
+                    self.workload_engine.highest_workload(
+                        day,
+                        limit=1000
+                    )
+                )
+
+                if not results:
+                    return (
+                        f"No workload data found for {day}."
+                    )
+
+                rank = self._extract_workload_rank(query)
+
+                # Sort by workload descending
+                results = sorted(
+                    results,
+                    key=lambda x: (
+                        -x["periods"],
+                        x["teacher"].lower()
+                    )
+                )
+
+                if rank > len(results):
+                    return (
+                        f"There is no {rank}th highest "
+                        f"workload faculty on {day}."
+                    )
+
+                ranked_periods = sorted(
+                    set(
+                        item["periods"]
+                        for item in results
+                    ),
+                    reverse=True
+                )
+
+                if rank > len(ranked_periods):
+                    return (
+                        f"There are only "
+                        f"{len(ranked_periods)} workload levels "
+                        f"on {day}."
+                    )
+
+                target_periods = ranked_periods[rank - 1]
+
+                ranked_faculty = [
+                    item
+                    for item in results
+                    if item["periods"] == target_periods
+                ]
+
+                rank_names = {
+                    1: "highest",
+                    2: "second highest",
+                    3: "third highest",
+                    4: "fourth highest",
+                    5: "fifth highest",
+                }
+
+                rank_text = rank_names.get(
+                    rank,
+                    f"{rank}th highest"
+                )
+
+                lines = [
+                    f"Faculty with the {rank_text} "
+                    f"workload on {day}:",
+                    ""
+                ]
+
+                for index, item in enumerate(
+                    ranked_faculty,
+                    start=1
+                ):
+                    lines.append(
+                        f"{index}. {item['teacher']} — "
+                        f"{item['periods']} periods"
+                    )
+
+                return "\n".join(lines)
+
+            # --------------------------------------------------
+            # SPECIFIC FACULTY WORKLOAD
+            # --------------------------------------------------
+
+            teacher = self._extract_period_teacher(query)
+
+            if teacher and day:
+
+                result = (
+                    self.workload_engine.faculty_daily_workload(
+                        teacher,
+                        day
+                    )
+                )
+
+                periods = result.get("periods", 0)
+
+                return (
+                    f"{teacher} has {periods} periods on {day}."
+                )
+
+            # --------------------------------------------------
+            # WORKLOAD SUMMARY
+            # --------------------------------------------------
+
+            if day:
+
+                result = (
+                    self.workload_engine.workload_summary(day)
+                )
+
+                return (
+                    f"Workload summary for {day}:\n"
+                    f"Faculty count: {result['faculty_count']}\n"
+                    f"Total periods: {result['total_periods']}\n"
+                    f"Average periods: {result['average_periods']}\n"
+                    f"Minimum periods: {result['minimum_periods']}\n"
+                    f"Maximum periods: {result['maximum_periods']}"
+                )
+
+            return (
+                "Please specify a day for the workload query, "
+                "for example Monday."
+            )
+
+
+        
+
+
+        # ==================================================
+        # FACULTY PERIOD QUERY
         # ==================================================
 
         if self._is_faculty_period_query(query):
@@ -904,6 +2207,13 @@ class FacultyAIChatbot:
                 return self._process_faculty_period_query(
                     query
                 )
+
+
+        # --------------------------------------------------
+        # EXISTING QUERY PIPELINE
+        # --------------------------------------------------
+        
+
 
         # --------------------------------------------------
         # EXISTING QUERY PIPELINE
