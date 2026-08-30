@@ -184,415 +184,523 @@ def _generate_response(intent, result):
 
             return "No room information found."
 
+        if intent == "FIND_CLASS_TEACHER":
+
+            return (
+                "No faculty found teaching "
+                "the requested class."
+            )
+
         return "No matching information found."
 
-        # =====================================================
-        # FIND TEACHER
-        # =====================================================
+    # =====================================================
+    # RESULTS FOUND - FORMAT PER INTENT
+    #
+    # NOTE: This section previously lived nested inside the
+    # "if not data:" block above, which made it unreachable
+    # any time results actually existed (the "if not data:"
+    # block always returns before reaching it). It has been
+    # moved back out to the correct indentation level so it
+    # runs for every successful (non-empty) result, restoring
+    # the intended behavior for FIND_TEACHER, FIND_FREE_FACULTY,
+    # FIND_SUBJECT, and FIND_ROOM, and adding formatting for
+    # the new FIND_CLASS_TEACHER intent.
+    # =====================================================
 
-        if intent == "FIND_TEACHER":
+    # =====================================================
+    # FIND TEACHER
+    # =====================================================
 
-            teachers = set()
+    if intent == "FIND_TEACHER":
+
+        teachers = set()
+
+        for row in data:
+
+            if isinstance(row, dict):
+
+                teacher = row.get(
+                    "teacher",
+                    ""
+                )
+
+            else:
+
+                try:
+                    teacher = row[0]
+                except Exception:
+                    teacher = ""
+
+            if teacher:
+                teachers.add(
+                    str(teacher)
+                )
+
+        teachers = sorted(teachers)
+
+        return (
+            f"Teacher(s) ({len(teachers)}):\n\n"
+            + "\n".join(
+                f"• {teacher}"
+                for teacher in teachers
+            )
+        )
+
+    # =====================================================
+    # FIND CLASS TEACHER
+    #
+    # Example:
+    # Who teaches 7CS?
+    # Show faculty teaching 7CS
+    # Who teaches 7CS on Monday?
+    #
+    # Groups the faculty teaching this class together with
+    # the subject(s) they teach for it, built entirely from
+    # the records returned by the query engine. No faculty
+    # name, class name, or subject is hard-coded.
+    # =====================================================
+
+    if intent == "FIND_CLASS_TEACHER":
+
+        class_name = None
+        day = None
+
+        if isinstance(result, dict):
+            class_name = result.get("class_name")
+            day = result.get("day")
+
+        teacher_subjects = {}
+
+        for row in data:
+
+            if not isinstance(row, dict):
+                continue
+
+            teacher = str(
+                row.get("teacher", "")
+            ).strip()
+
+            if not teacher:
+                continue
+
+            subject = str(
+                row.get("subject", "")
+            ).strip()
+
+            if teacher not in teacher_subjects:
+                teacher_subjects[teacher] = set()
+
+            if subject:
+                teacher_subjects[teacher].add(subject)
+
+        teacher_names = sorted(teacher_subjects.keys())
+
+        header = (
+            f"Faculty teaching {class_name}"
+            if class_name
+            else "Faculty teaching this class"
+        )
+
+        if day:
+            header += f" on {str(day).capitalize()}"
+
+        header += f" ({len(teacher_names)}):"
+
+        lines = [header, ""]
+
+        for teacher in teacher_names:
+
+            subjects_for_teacher = sorted(
+                teacher_subjects[teacher]
+            )
+
+            if subjects_for_teacher:
+
+                lines.append(
+                    f"• {teacher} — "
+                    f"{', '.join(subjects_for_teacher)}"
+                )
+
+            else:
+
+                lines.append(f"• {teacher}")
+
+        return "\n".join(lines)
+
+    # =====================================================
+    # FIND FREE FACULTY
+    # =====================================================
+
+    if intent == "FIND_FREE_FACULTY":
+
+        # -------------------------------------------------
+        # IMPORTANT:
+        #
+        # If the query asks for a particular faculty,
+        # the result contains that faculty's free slots.
+        #
+        # We therefore display slot information instead
+        # of only displaying the teacher name.
+        # -------------------------------------------------
+
+        # Check whether the returned records contain
+        # slot information.
+        has_slot_information = any(
+            isinstance(row, dict)
+            and row.get("slot") is not None
+            for row in data
+        )
+
+        # -------------------------------------------------
+        # CASE 1:
+        # Faculty-specific free-slot query
+        # -------------------------------------------------
+
+        if has_slot_information:
+
+            # Group records by teacher
+            faculty_slots = {}
 
             for row in data:
 
-                if isinstance(row, dict):
+                if not isinstance(row, dict):
+                    continue
 
-                    teacher = row.get(
+                teacher = str(
+                    row.get(
                         "teacher",
                         ""
                     )
+                ).strip()
 
-                else:
+                if not teacher:
+                    continue
 
-                    try:
-                        teacher = row[0]
-                    except Exception:
-                        teacher = ""
-
-                if teacher:
-                    teachers.add(
-                        str(teacher)
-                    )
-
-            teachers = sorted(teachers)
-
-            return (
-                f"Teacher(s) ({len(teachers)}):\n\n"
-                + "\n".join(
-                    f"• {teacher}"
-                    for teacher in teachers
+                slot = row.get(
+                    "slot"
                 )
-            )
 
-        # =====================================================
-        # FIND FREE FACULTY
-        # =====================================================
-
-        if intent == "FIND_FREE_FACULTY":
-
-            # -------------------------------------------------
-            # IMPORTANT:
-            #
-            # If the query asks for a particular faculty,
-            # the result contains that faculty's free slots.
-            #
-            # We therefore display slot information instead
-            # of only displaying the teacher name.
-            # -------------------------------------------------
-
-            # Check whether the returned records contain
-            # slot information.
-            has_slot_information = any(
-                isinstance(row, dict)
-                and row.get("slot") is not None
-                for row in data
-            )
-
-            # -------------------------------------------------
-            # CASE 1:
-            # Faculty-specific free-slot query
-            # -------------------------------------------------
-
-            if has_slot_information:
-
-                # Group records by teacher
-                faculty_slots = {}
-
-                for row in data:
-
-                    if not isinstance(row, dict):
-                        continue
-
-                    teacher = str(
-                        row.get(
-                            "teacher",
-                            ""
-                        )
-                    ).strip()
-
-                    if not teacher:
-                        continue
-
-                    slot = row.get(
-                        "slot"
-                    )
-
-                    slot_time = str(
-                        row.get(
-                            "slot_time",
-                            ""
-                        )
-                    ).strip()
-
-                    if teacher not in faculty_slots:
-                        faculty_slots[teacher] = []
-
-                    faculty_slots[teacher].append(
-                        (
-                            slot,
-                            slot_time
-                        )
-                    )
-
-                # -------------------------------------------------
-                # Build response
-                # -------------------------------------------------
-
-                output = []
-
-                for teacher in sorted(
-                    faculty_slots.keys()
-                ):
-
-                    slots = faculty_slots[
-                        teacher
-                    ]
-
-                    # Remove duplicate slots
-                    unique_slots = {}
-
-                    for slot, slot_time in slots:
-
-                        if slot not in unique_slots:
-                            unique_slots[
-                                slot
-                            ] = slot_time
-
-                    # Sort numerically when possible
-                    def slot_sort_key(item):
-
-                        slot = item[0]
-
-                        try:
-                            return (
-                                0,
-                                int(slot)
-                            )
-                        except (
-                            ValueError,
-                            TypeError
-                        ):
-                            return (
-                                1,
-                                str(slot)
-                            )
-
-                    sorted_slots = sorted(
-                        unique_slots.items(),
-                        key=slot_sort_key
-                    )
-
-                    output.append(
-                        f"{teacher} is FREE."
-                    )
-
-                    output.append(
-                        "\nFree slots:"
-                    )
-
-                    for slot, slot_time in sorted_slots:
-
-                        if slot_time:
-
-                            output.append(
-                                f"• Slot {slot} "
-                                f"— {slot_time}"
-                            )
-
-                        else:
-
-                            output.append(
-                                f"• Slot {slot}"
-                            )
-
-                    output.append("")
-
-                return "\n".join(output).strip()
-
-            # -------------------------------------------------
-            # CASE 2:
-            # Normal "Available faculty Monday Slot 3"
-            #
-            # This query returns many teachers for ONE slot.
-            # Preserve the existing behavior.
-            # -------------------------------------------------
-
-            teachers = []
-
-            for row in data:
-
-                if isinstance(row, dict):
-
-                    teacher = row.get(
-                        "teacher",
+                slot_time = str(
+                    row.get(
+                        "slot_time",
                         ""
                     )
+                ).strip()
 
-                else:
+                if teacher not in faculty_slots:
+                    faculty_slots[teacher] = []
 
-                    teacher = str(row)
-
-                if teacher:
-                    teachers.append(
-                        str(teacher)
+                faculty_slots[teacher].append(
+                    (
+                        slot,
+                        slot_time
                     )
-
-            teachers = sorted(
-                set(teachers)
-            )
-
-            return (
-                f"Available Faculty "
-                f"({len(teachers)}):\n\n"
-                + "\n".join(
-                    f"• {teacher}"
-                    for teacher in teachers
                 )
-            )
 
-        # =====================================================
-        # FIND SUBJECT
-        # =====================================================
-
-        if intent == "FIND_SUBJECT":
-
-            subjects = set()
-
-            for row in data:
-
-                if isinstance(row, dict):
-
-                    subject = row.get(
-                        "subject",
-                        ""
-                    )
-
-                else:
-
-                    try:
-                        subject = row[3]
-                    except Exception:
-                        subject = ""
-
-                if subject:
-                    subjects.add(
-                        str(subject)
-                    )
-
-            subjects = sorted(subjects)
-
-            return (
-                f"Subjects ({len(subjects)}):\n\n"
-                + "\n".join(
-                    f"• {subject}"
-                    for subject in subjects
-                )
-            )
-
-        # =====================================================
-        # FIND ROOM
-        # =====================================================
-
-        if intent == "FIND_ROOM":
+            # -------------------------------------------------
+            # Build response
+            # -------------------------------------------------
 
             output = []
 
-            for row in data:
+            for teacher in sorted(
+                faculty_slots.keys()
+            ):
 
-                if isinstance(row, dict):
-
-                    subject = row.get(
-                        "subject",
-                        ""
-                    )
-
-                    teacher = row.get(
-                        "teacher",
-                        ""
-                    )
-
-                    day = row.get(
-                        "day",
-                        ""
-                    )
-
-                    slot = row.get(
-                        "slot",
-                        ""
-                    )
-
-                    room = row.get(
-                        "room",
-                        ""
-                    )
-
-                    class_name = row.get(
-                        "class_name",
-                        ""
-                    )
-
-                    group = row.get(
-                        "group_name",
-                        ""
-                    )
-
-                    lecture_type = row.get(
-                        "type",
-                        ""
-                    )
-
-                else:
-
-                    try:
-
-                        (
-                            teacher,
-                            day,
-                            slot,
-                            subject,
-                            room,
-                            class_name,
-                            group,
-                            lecture_type
-                        ) = row
-
-                    except Exception:
-                        continue
-
-                output.append(
-                    f"Subject : {subject}\n"
-                    f"Teacher : {teacher}\n"
-                    f"Day     : {day}\n"
-                    f"Slot    : {slot}\n"
-                    f"Room    : {room}\n"
-                    f"Class   : {class_name}\n"
-                    f"Group   : {group}\n"
-                    f"Type    : {lecture_type}"
-                )
-
-            return (
-                f"Room Information "
-                f"({len(output)}):\n\n"
-                + "\n\n".join(output)
-            )
-
-        # =====================================================
-        # SHOW TIMETABLE
-        # =====================================================
-
-        if intent == "SHOW_TIMETABLE":
-            timetable = result if isinstance(result, dict) else {}
-            teacher = timetable.get("teacher", "This faculty")
-            day = timetable.get("day")
-
-            results = timetable.get("results", data)
-            has_any_records = timetable.get("has_any_records", False)
-
-            if results:
-                lines = [
-                    f"{teacher}'s schedule"
-                    + (f" on {day.capitalize()}" if day else "")
-                    + ":"
+                slots = faculty_slots[
+                    teacher
                 ]
 
-                for record in results:
-                    slot = record.get("slot", "")
-                    slot_time = record.get("slot_time", "")
-                    subject = record.get("subject", "")
-                    room = record.get("room", "")
+                # Remove duplicate slots
+                unique_slots = {}
 
-                    line = f"• Slot {slot}"
+                for slot, slot_time in slots:
+
+                    if slot not in unique_slots:
+                        unique_slots[
+                            slot
+                        ] = slot_time
+
+                # Sort numerically when possible
+                def slot_sort_key(item):
+
+                    slot = item[0]
+
+                    try:
+                        return (
+                            0,
+                            int(slot)
+                        )
+                    except (
+                        ValueError,
+                        TypeError
+                    ):
+                        return (
+                            1,
+                            str(slot)
+                        )
+
+                sorted_slots = sorted(
+                    unique_slots.items(),
+                    key=slot_sort_key
+                )
+
+                output.append(
+                    f"{teacher} is FREE."
+                )
+
+                output.append(
+                    "\nFree slots:"
+                )
+
+                for slot, slot_time in sorted_slots:
 
                     if slot_time:
-                        line += f" — {slot_time}"
 
-                    if subject:
-                        line += f" — {subject}"
+                        output.append(
+                            f"• Slot {slot} "
+                            f"— {slot_time}"
+                        )
 
-                    if room:
-                        line += f" — Room {room}"
+                    else:
 
-                    lines.append(line)
+                        output.append(
+                            f"• Slot {slot}"
+                        )
 
-                return "\n".join(lines)
+                output.append("")
 
-            # Records exist, but none are busy.
-            if has_any_records:
-                if day:
-                    return (
-                        f"{teacher} has no scheduled classes on "
-                        f"{day.capitalize()} — all slots are free."
-                    )
+            return "\n".join(output).strip()
 
-                return f"{teacher} has no scheduled classes — all available slots are free."
+        # -------------------------------------------------
+        # CASE 2:
+        # Normal "Available faculty Monday Slot 3"
+        #
+        # This query returns many teachers for ONE slot.
+        # Preserve the existing behavior.
+        # -------------------------------------------------
 
-            return "No timetable information found."
-        # =====================================================
-        # UNKNOWN / FALLBACK
-        # =====================================================
+        teachers = []
 
-        return str(data)
+        for row in data:
+
+            if isinstance(row, dict):
+
+                teacher = row.get(
+                    "teacher",
+                    ""
+                )
+
+            else:
+
+                teacher = str(row)
+
+            if teacher:
+                teachers.append(
+                    str(teacher)
+                )
+
+        teachers = sorted(
+            set(teachers)
+        )
+
+        return (
+            f"Available Faculty "
+            f"({len(teachers)}):\n\n"
+            + "\n".join(
+                f"• {teacher}"
+                for teacher in teachers
+            )
+        )
+
+    # =====================================================
+    # FIND SUBJECT
+    # =====================================================
+
+    if intent == "FIND_SUBJECT":
+
+        subjects = set()
+
+        for row in data:
+
+            if isinstance(row, dict):
+
+                subject = row.get(
+                    "subject",
+                    ""
+                )
+
+            else:
+
+                try:
+                    subject = row[3]
+                except Exception:
+                    subject = ""
+
+            if subject:
+                subjects.add(
+                    str(subject)
+                )
+
+        subjects = sorted(subjects)
+
+        return (
+            f"Subjects ({len(subjects)}):\n\n"
+            + "\n".join(
+                f"• {subject}"
+                for subject in subjects
+            )
+        )
+
+    # =====================================================
+    # FIND ROOM
+    # =====================================================
+
+    if intent == "FIND_ROOM":
+
+        output = []
+
+        for row in data:
+
+            if isinstance(row, dict):
+
+                subject = row.get(
+                    "subject",
+                    ""
+                )
+
+                teacher = row.get(
+                    "teacher",
+                    ""
+                )
+
+                day = row.get(
+                    "day",
+                    ""
+                )
+
+                slot = row.get(
+                    "slot",
+                    ""
+                )
+
+                room = row.get(
+                    "room",
+                    ""
+                )
+
+                class_name = row.get(
+                    "class_name",
+                    ""
+                )
+
+                group = row.get(
+                    "group_name",
+                    ""
+                )
+
+                lecture_type = row.get(
+                    "type",
+                    ""
+                )
+
+            else:
+
+                try:
+
+                    (
+                        teacher,
+                        day,
+                        slot,
+                        subject,
+                        room,
+                        class_name,
+                        group,
+                        lecture_type
+                    ) = row
+
+                except Exception:
+                    continue
+
+            output.append(
+                f"Subject : {subject}\n"
+                f"Teacher : {teacher}\n"
+                f"Day     : {day}\n"
+                f"Slot    : {slot}\n"
+                f"Room    : {room}\n"
+                f"Class   : {class_name}\n"
+                f"Group   : {group}\n"
+                f"Type    : {lecture_type}"
+            )
+
+        return (
+            f"Room Information "
+            f"({len(output)}):\n\n"
+            + "\n\n".join(output)
+        )
+
+    # =====================================================
+    # SHOW TIMETABLE
+    #
+    # NOTE: SHOW_TIMETABLE always returns earlier in this
+    # function (see top of file), so this branch is kept
+    # only as a defensive fallback and is not expected to
+    # be reached in normal operation.
+    # =====================================================
+
+    if intent == "SHOW_TIMETABLE":
+        timetable = result if isinstance(result, dict) else {}
+        teacher = timetable.get("teacher", "This faculty")
+        day = timetable.get("day")
+
+        results = timetable.get("results", data)
+        has_any_records = timetable.get("has_any_records", False)
+
+        if results:
+            lines = [
+                f"{teacher}'s schedule"
+                + (f" on {day.capitalize()}" if day else "")
+                + ":"
+            ]
+
+            for record in results:
+                slot = record.get("slot", "")
+                slot_time = record.get("slot_time", "")
+                subject = record.get("subject", "")
+                room = record.get("room", "")
+
+                line = f"• Slot {slot}"
+
+                if slot_time:
+                    line += f" — {slot_time}"
+
+                if subject:
+                    line += f" — {subject}"
+
+                if room:
+                    line += f" — Room {room}"
+
+                lines.append(line)
+
+            return "\n".join(lines)
+
+        # Records exist, but none are busy.
+        if has_any_records:
+            if day:
+                return (
+                    f"{teacher} has no scheduled classes on "
+                    f"{day.capitalize()} — all slots are free."
+                )
+
+            return f"{teacher} has no scheduled classes — all available slots are free."
+
+        return "No timetable information found."
+
+    # =====================================================
+    # UNKNOWN / FALLBACK
+    # =====================================================
+
+    return str(data)
 
 
 class ResponseGenerator:

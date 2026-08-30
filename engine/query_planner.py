@@ -146,6 +146,50 @@ class QueryPlanner:
             }
 
         # ==================================================
+        # FIND CLASS TEACHER
+        #
+        # Example:
+        # Who teaches 7CS?
+        # Show faculty teaching 7CS
+        # Who teaches 7CS on Monday?
+        #
+        # Dynamically reuses the existing
+        # query_engine.class_schedule() lookup - the same
+        # method already used by SHOW_TIMETABLE for a class.
+        # No class name, faculty name, or day is hard-coded.
+        # ==================================================
+
+        if intent == "FIND_CLASS_TEACHER":
+
+            if not class_name:
+
+                return {
+                    "count": 0,
+                    "results": [],
+                    "message": (
+                        "Please specify a class."
+                    )
+                }
+
+            result = query_engine.class_schedule(
+                class_name=class_name,
+                day=day,
+                slot=slot
+            )
+
+            results = result.get(
+                "results",
+                []
+            )
+
+            return {
+                "count": len(results),
+                "results": results,
+                "class_name": class_name,
+                "day": result.get("day", day)
+            }
+
+        # ==================================================
         # FIND SUBJECT
         # ==================================================
 

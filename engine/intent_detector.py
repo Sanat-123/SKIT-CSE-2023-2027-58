@@ -1,3 +1,6 @@
+import re
+
+
 class IntentDetector:
     """
     Rule-based Intent Detector.
@@ -35,6 +38,7 @@ class IntentDetector:
                 "teach",
                 "teaches",
                 "teacher",
+                "teaching",
                 "faculty"
             }
         },
@@ -316,6 +320,36 @@ class IntentDetector:
         )
 
         if teacher_keywords:
+
+            # ==============================================
+            # 3a. DISAMBIGUATE CLASS vs SUBJECT
+            # ==============================================
+            #
+            # A raw query token that looks like a class code
+            # (digits followed by letters, e.g. "7cs", "5cs",
+            # "3ece", optionally with a "-section" suffix)
+            # is treated as referring to a CLASS even when the
+            # fuzzy subject matcher also produced a coincidental
+            # subject match from unrelated text containing that
+            # same token (e.g. a subject whose raw description
+            # happens to mention "5CS").
+            #
+            # This is a generic, shape-based check - it never
+            # references any specific class name, so it applies
+            # equally to any class present in the timetable.
+            # ==============================================
+
+            class_like_token = any(
+                re.fullmatch(
+                    r"\d+[a-z]+(-[a-z0-9]+)*",
+                    word
+                )
+                for word in words
+            )
+
+            if classes and (class_like_token or not subjects):
+
+                return "FIND_CLASS_TEACHER"
 
             if subjects:
 
