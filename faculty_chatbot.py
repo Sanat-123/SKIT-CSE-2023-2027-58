@@ -541,6 +541,31 @@ class FacultyAIChatbot:
 
         return None
 
+    # ======================================================
+    # ORDINAL FORMATTING (generic linguistic helper - e.g.
+    # 1 -> "1st", 7 -> "7th". Not tied to any specific
+    # semester, class, or faculty data.)
+    # ======================================================
+
+    @staticmethod
+    def _ordinal(number):
+
+        try:
+            number = int(number)
+        except (TypeError, ValueError):
+            return str(number)
+
+        if 10 <= (number % 100) <= 20:
+            suffix = "th"
+        else:
+            suffix = {
+                1: "st",
+                2: "nd",
+                3: "rd"
+            }.get(number % 10, "th")
+
+        return f"{number}{suffix}"
+
     def _extract_period_teacher(self, query):
         """Resolve a specific faculty name from a period query."""
 
@@ -1494,10 +1519,13 @@ class FacultyAIChatbot:
         # SEMESTER-WIDE FACULTY LOAD
         #
         # Example:
+        # Who is taking 7th semester workload?
         # Who is taking 7th semester load?
+        # Who teaches 7th semester?
         # Who is teaching 7th semester?
-        # Which faculty are taking 7th semester classes?
-        # Show faculty teaching 7th semester.
+        # Which faculty are teaching 7th semester?
+        # Which faculty have workload in 7th semester?
+        # Show 7th semester faculty workload
         # Who has load in 7th semester?
         #
         # This is checked BEFORE the absence/workload keyword
@@ -1508,12 +1536,17 @@ class FacultyAIChatbot:
         # The semester number is parsed purely from the query
         # text (see _extract_semester_number - a linguistic
         # ordinal/number parser). Which classes belong to that
-        # semester, and which faculty teach them, is derived
-        # entirely from query_engine.semester_schedule(), which
-        # groups the ALREADY-LOADED timetable events by the
-        # leading digit of each event's class_name. Nothing
-        # here hard-codes a semester number, class name, or
-        # faculty name.
+        # semester, which faculty teach them, and their period
+        # counts are derived entirely from
+        # workload_engine.semester_workload(), which reuses the
+        # EXISTING workload engine's "one canonical event = one
+        # period" definition (the same definition used by
+        # daily_workload()/weekly_workload() for a single
+        # teacher) and query_engine's own leading-digit semester
+        # derivation (_semester_from_class_name), so multi-slot
+        # labs are counted the same way everywhere and nothing
+        # here hard-codes a semester number, class name, faculty
+        # name, or period count.
         # --------------------------------------------------
 
         has_semester_word = bool(
@@ -1530,14 +1563,14 @@ class FacultyAIChatbot:
 
                 day = self._extract_day(query)
 
-                semester_result = (
-                    self.query_engine.semester_schedule(
+                workload_result = (
+                    self.workload_engine.semester_workload(
                         semester_number,
                         day=day
                     )
                 )
 
-                results = semester_result.get(
+                results = workload_result.get(
                     "results",
                     []
                 )
@@ -1552,16 +1585,19 @@ class FacultyAIChatbot:
                     )
 
                 header = (
-                    f"Faculty teaching semester "
-                    f"{semester_number}"
+                    f"{self._ordinal(semester_number)} "
+                    f"Semester Faculty Workload"
                 )
 
                 if day:
                     header += f" on {day}"
 
-                return ResponseGenerator.format_teacher_list(
-                    header,
-                    results
+                return (
+                    ResponseGenerator
+                    .format_teacher_workload_list(
+                        header,
+                        results
+                    )
                 )
 
         # ==================================================

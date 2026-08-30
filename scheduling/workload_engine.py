@@ -191,6 +191,121 @@ class FacultyWorkloadEngine:
         }
 
     # --------------------------------------------------
+    # SEMESTER WORKLOAD
+    #
+    # Faculty workload (period counts) for an entire
+    # semester, e.g. "7th semester".
+    #
+    # A semester is not a field stored anywhere in the
+    # timetable data. It is derived from the leading digit
+    # of each event's class_name, using the exact same
+    # derivation query_engine.semester_schedule() already
+    # uses (query_engine._semester_from_class_name), so
+    # "semester 7" means the same thing everywhere in the
+    # app and the mapping is never duplicated or hard-coded.
+    #
+    # Uses the same "one canonical event = one period"
+    # definition as daily_workload()/weekly_workload() above.
+    # Multi-slot labs are already represented as one canonical
+    # event per slot (see CanonicalEventMatcher), so counting
+    # one period per matching event here is consistent with
+    # the rest of the workload engine and does not double- or
+    # under-count multi-hour blocks.
+    # --------------------------------------------------
+
+    def semester_workload(
+        self,
+        semester,
+        day=None
+    ):
+
+        try:
+            target_semester = int(semester)
+        except (TypeError, ValueError):
+            return {
+                "query_type": "semester_workload",
+                "semester": semester,
+                "day": day,
+                "count": 0,
+                "results": []
+            }
+
+        day_key = None
+
+        if day:
+            day_key = self._normalize_day(day)
+
+        workload = defaultdict(int)
+        subjects = defaultdict(set)
+
+        for event in self._events():
+
+            teacher = self._teacher(event)
+
+            if not teacher:
+                continue
+
+            class_name = (
+                event.get("class_name")
+                if isinstance(event, dict)
+                else None
+            )
+
+            record_semester = (
+                self.query_engine._semester_from_class_name(
+                    class_name
+                )
+            )
+
+            if record_semester != target_semester:
+                continue
+
+            if day_key:
+
+                if self._event_day(event) != day_key:
+                    continue
+
+            workload[teacher] += 1
+
+            subject = (
+                str(
+                    event.get("subject", "")
+                ).strip()
+                if isinstance(event, dict)
+                else ""
+            )
+
+            if subject:
+                subjects[teacher].add(subject)
+
+        results = []
+
+        for teacher, periods in workload.items():
+
+            results.append({
+                "teacher": teacher,
+                "periods": periods,
+                "subjects": sorted(
+                    subjects.get(teacher, [])
+                )
+            })
+
+        results.sort(
+            key=lambda x: (
+                -x["periods"],
+                x["teacher"].lower()
+            )
+        )
+
+        return {
+            "query_type": "semester_workload",
+            "semester": target_semester,
+            "day": day_key,
+            "count": len(results),
+            "results": results
+        }
+
+    # --------------------------------------------------
     # WEEKLY WORKLOAD
     # --------------------------------------------------
 

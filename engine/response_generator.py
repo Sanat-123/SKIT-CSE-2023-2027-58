@@ -75,6 +75,57 @@ def format_teacher_list(header, results):
     return "\n".join(lines)
 
 
+def format_teacher_workload_list(header, results):
+    """
+    Builds a bulleted "Teacher — N periods" list from
+    workload-engine-style records - each a dict with at
+    least "teacher" and "periods", and optionally a
+    "subjects" list (see FacultyWorkloadEngine.semester_workload).
+
+    Unlike format_teacher_list() (which only shows the
+    subjects a faculty member covers), this shows the actual
+    period COUNT for each faculty member, all derived from
+    whatever records are passed in - no faculty name, class
+    name, or period count is hard-coded.
+
+    `header` should NOT include the count or the trailing
+    colon - both are added here.
+    """
+
+    rows = [
+        item for item in (results or [])
+        if isinstance(item, dict) and item.get("teacher")
+    ]
+
+    lines = [
+        f"{header} ({len(rows)}):",
+        ""
+    ]
+
+    for item in rows:
+
+        teacher = str(item["teacher"]).strip()
+        periods = item.get("periods", 0)
+
+        try:
+            periods = int(periods)
+        except (TypeError, ValueError):
+            periods = 0
+
+        period_word = "period" if periods == 1 else "periods"
+
+        line = f"• {teacher} — {periods} {period_word}"
+
+        subjects = item.get("subjects") or []
+
+        if subjects:
+            line += f" ({', '.join(subjects)})"
+
+        lines.append(line)
+
+    return "\n".join(lines)
+
+
 def _generate_response(intent, result):
 
     # =====================================================
@@ -759,3 +810,6 @@ def _generate_response(intent, result):
 class ResponseGenerator:
     generate = staticmethod(_generate_response)
     format_teacher_list = staticmethod(format_teacher_list)
+    format_teacher_workload_list = staticmethod(
+        format_teacher_workload_list
+    )
