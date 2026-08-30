@@ -38,8 +38,12 @@ class IntentDetector:
                 "teach",
                 "teaches",
                 "teacher",
+                "teachers",
                 "teaching",
-                "faculty"
+                "faculty",
+                "handle",
+                "handles",
+                "handling"
             }
         },
 

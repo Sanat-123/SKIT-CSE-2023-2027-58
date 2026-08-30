@@ -1,6 +1,3 @@
-
-
-
 import re
 from datetime import datetime
 
@@ -479,6 +476,68 @@ class FacultyAIChatbot:
             ):
 
                 return days[word]
+
+        return None
+
+    # ======================================================
+    # EXTRACT SEMESTER NUMBER
+    # ======================================================
+
+    @staticmethod
+    def _extract_semester_number(query):
+        """
+        Extract a semester number (1-10) from phrasing such as
+        "7th semester", "seventh semester", "semester 7", or
+        "sem 7".
+
+        This is a purely linguistic ordinal/number parser - it
+        does not reference any specific semester, class, or
+        faculty member from the timetable data, and returns
+        None when no semester phrase is present.
+        """
+
+        text = str(query).lower()
+
+        ordinal_words = {
+            "first": 1, "1st": 1,
+            "second": 2, "2nd": 2,
+            "third": 3, "3rd": 3,
+            "fourth": 4, "4th": 4,
+            "fifth": 5, "5th": 5,
+            "sixth": 6, "6th": 6,
+            "seventh": 7, "7th": 7,
+            "eighth": 8, "8th": 8,
+            "ninth": 9, "9th": 9,
+            "tenth": 10, "10th": 10,
+        }
+
+        for word, value in ordinal_words.items():
+
+            if re.search(
+                rf"\b{re.escape(word)}\s+sem",
+                text
+            ):
+                return value
+
+        match = re.search(
+            r"\bsem(?:ester)?\s*(\d{1,2})\b",
+            text
+        )
+
+        if match:
+            value = int(match.group(1))
+            if 1 <= value <= 10:
+                return value
+
+        match = re.search(
+            r"\b(\d{1,2})\s*(?:th|st|nd|rd)?\s+sem",
+            text
+        )
+
+        if match:
+            value = int(match.group(1))
+            if 1 <= value <= 10:
+                return value
 
         return None
 
@@ -1430,7 +1489,82 @@ class FacultyAIChatbot:
                 )
 
                 return "\n".join(lines)
-                    # ==================================================
+
+        # --------------------------------------------------
+        # SEMESTER-WIDE FACULTY LOAD
+        #
+        # Example:
+        # Who is taking 7th semester load?
+        # Who is teaching 7th semester?
+        # Which faculty are taking 7th semester classes?
+        # Show faculty teaching 7th semester.
+        # Who has load in 7th semester?
+        #
+        # This is checked BEFORE the absence/workload keyword
+        # checks below, because words like "classes" and "load"
+        # in these phrasings would otherwise be misread as an
+        # absence or per-teacher workload query.
+        #
+        # The semester number is parsed purely from the query
+        # text (see _extract_semester_number - a linguistic
+        # ordinal/number parser). Which classes belong to that
+        # semester, and which faculty teach them, is derived
+        # entirely from query_engine.semester_schedule(), which
+        # groups the ALREADY-LOADED timetable events by the
+        # leading digit of each event's class_name. Nothing
+        # here hard-codes a semester number, class name, or
+        # faculty name.
+        # --------------------------------------------------
+
+        has_semester_word = bool(
+            re.search(r"\bsem(?:ester)?\b", text)
+        )
+
+        if has_semester_word:
+
+            semester_number = self._extract_semester_number(
+                query
+            )
+
+            if semester_number is not None:
+
+                day = self._extract_day(query)
+
+                semester_result = (
+                    self.query_engine.semester_schedule(
+                        semester_number,
+                        day=day
+                    )
+                )
+
+                results = semester_result.get(
+                    "results",
+                    []
+                )
+
+                if not results:
+
+                    return (
+                        f"No faculty found teaching "
+                        f"semester {semester_number}"
+                        + (f" on {day}" if day else "")
+                        + "."
+                    )
+
+                header = (
+                    f"Faculty teaching semester "
+                    f"{semester_number}"
+                )
+
+                if day:
+                    header += f" on {day}"
+
+                return ResponseGenerator.format_teacher_list(
+                    header,
+                    results
+                )
+
+        # ==================================================
         # ABSENT FACULTY / REPLACEMENT QUERY
         # ==================================================
 

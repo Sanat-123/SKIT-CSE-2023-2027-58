@@ -183,7 +183,17 @@ class EntityExtractor:
 
             entities[entity_type].append({
                 "value": best["value"],
-                "confidence": best["confidence"]
+                "confidence": best["confidence"],
+                # Raw text (as typed/tokenized by the user) that
+                # matched this entity, before fuzzy-resolution to
+                # a single canonical value. Additive field - existing
+                # consumers that only read "value"/"confidence" are
+                # unaffected. Used by FIND_CLASS_TEACHER so a bare
+                # class family like "7CS" can match every section
+                # under it (7CSA, 7CS-DS, 7CS-IOT, ...) instead of
+                # being narrowed to whichever single section the
+                # fuzzy matcher happened to resolve it to.
+                "text": best["text"]
             })
 
         return entities

@@ -157,6 +157,20 @@ class QueryPlanner:
         # query_engine.class_schedule() lookup - the same
         # method already used by SHOW_TIMETABLE for a class.
         # No class name, faculty name, or day is hard-coded.
+        #
+        # IMPORTANT - raw text vs resolved value:
+        # The entity extractor resolves the typed class text
+        # (e.g. "7cs") to a single best-matching canonical
+        # class name (e.g. "7CS-DS"). Since class_schedule()
+        # already matches by substring containment, we look
+        # the class up using the RAW TEXT the user typed
+        # rather than that single resolved value. This means
+        # a bare class family such as "7CS" naturally matches
+        # every section under it (7CSA, 7CS-DS, 7CS-IOT, ...),
+        # while a fully specific query such as "7CS-DS" still
+        # matches only that section - all driven by the actual
+        # class names present in the timetable data, never
+        # hard-coded here.
         # ==================================================
 
         if intent == "FIND_CLASS_TEACHER":
@@ -171,8 +185,22 @@ class QueryPlanner:
                     )
                 }
 
+            raw_class_text = (
+                classes[0].get("text")
+                if classes and isinstance(classes[0], dict)
+                else None
+            )
+
+            lookup_class_name = raw_class_text or class_name
+
+            display_class_name = (
+                raw_class_text.upper()
+                if raw_class_text
+                else class_name
+            )
+
             result = query_engine.class_schedule(
-                class_name=class_name,
+                class_name=lookup_class_name,
                 day=day,
                 slot=slot
             )
@@ -185,7 +213,7 @@ class QueryPlanner:
             return {
                 "count": len(results),
                 "results": results,
-                "class_name": class_name,
+                "class_name": display_class_name,
                 "day": result.get("day", day)
             }
 

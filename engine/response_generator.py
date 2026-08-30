@@ -1,3 +1,80 @@
+def _group_teachers_with_subjects(results):
+    """
+    Groups a list of timetable event records by teacher,
+    collecting the distinct subject(s) each teacher appears
+    against. Built entirely from whatever records are passed
+    in - no teacher, class, or subject name is hard-coded.
+
+    Shared by the FIND_CLASS_TEACHER response formatting below
+    and by the semester-wide faculty-load lookup in
+    faculty_chatbot.py, so this grouping logic lives in exactly
+    one place.
+    """
+
+    teacher_subjects = {}
+
+    for row in results or []:
+
+        if not isinstance(row, dict):
+            continue
+
+        teacher = str(
+            row.get("teacher", "")
+        ).strip()
+
+        if not teacher:
+            continue
+
+        subject = str(
+            row.get("subject", "")
+        ).strip()
+
+        if teacher not in teacher_subjects:
+            teacher_subjects[teacher] = set()
+
+        if subject:
+            teacher_subjects[teacher].add(subject)
+
+    return teacher_subjects
+
+
+def format_teacher_list(header, results):
+    """
+    Builds a bulleted "Teacher — subject(s)" list from
+    timetable event records, prefixed with the given header
+    and a count. `header` should NOT include the count or the
+    trailing colon - both are added here.
+    """
+
+    teacher_subjects = _group_teachers_with_subjects(results)
+
+    teacher_names = sorted(teacher_subjects.keys())
+
+    lines = [
+        f"{header} ({len(teacher_names)}):",
+        ""
+    ]
+
+    for teacher in teacher_names:
+
+        subjects_for_teacher = sorted(
+            teacher_subjects[teacher]
+        )
+
+        if subjects_for_teacher:
+
+            lines.append(
+                f"• {teacher} — "
+                f"{', '.join(subjects_for_teacher)}"
+            )
+
+        else:
+
+            lines.append(f"• {teacher}")
+
+    return "\n".join(lines)
+
+
 def _generate_response(intent, result):
 
     # =====================================================
@@ -24,10 +101,33 @@ def _generate_response(intent, result):
 
         timetable = result if isinstance(result, dict) else {}
 
-        teacher = timetable.get(
-            "teacher",
-            "This faculty"
-        )
+        # ---------------------------------------------------
+        # WHO/WHAT THIS TIMETABLE IS FOR
+        #
+        # SHOW_TIMETABLE can be answering a teacher, class,
+        # room, or subject lookup (see QueryPlanner). Each of
+        # query_engine's underlying methods (teacher_schedule,
+        # class_schedule, room_schedule) echoes back the value
+        # it was looked up with under its own key ("teacher",
+        # "class_name", "room"). We use whichever of those is
+        # actually present to label the response correctly,
+        # instead of always assuming it's a faculty member.
+        # Nothing here is a hard-coded name - it's read back
+        # from the same dict the query engine already returned.
+        # ---------------------------------------------------
+
+        teacher = timetable.get("teacher")
+        class_name = timetable.get("class_name")
+        room = timetable.get("room")
+
+        if teacher:
+            subject_label = f"{teacher}'s schedule"
+        elif class_name:
+            subject_label = f"Timetable for {class_name}"
+        elif room:
+            subject_label = f"Timetable for Room {room}"
+        else:
+            subject_label = "Timetable"
 
         day = timetable.get("day")
 
@@ -42,13 +142,13 @@ def _generate_response(intent, result):
         )
 
         # -------------------------------------------------
-        # CASE 1: Teacher has scheduled/busy classes
+        # CASE 1: Scheduled/busy classes exist
         # -------------------------------------------------
 
         if results:
 
             lines = [
-                f"{teacher}'s schedule"
+                subject_label
                 + (
                     f" on {day.capitalize()}"
                     if day
@@ -269,32 +369,6 @@ def _generate_response(intent, result):
             class_name = result.get("class_name")
             day = result.get("day")
 
-        teacher_subjects = {}
-
-        for row in data:
-
-            if not isinstance(row, dict):
-                continue
-
-            teacher = str(
-                row.get("teacher", "")
-            ).strip()
-
-            if not teacher:
-                continue
-
-            subject = str(
-                row.get("subject", "")
-            ).strip()
-
-            if teacher not in teacher_subjects:
-                teacher_subjects[teacher] = set()
-
-            if subject:
-                teacher_subjects[teacher].add(subject)
-
-        teacher_names = sorted(teacher_subjects.keys())
-
         header = (
             f"Faculty teaching {class_name}"
             if class_name
@@ -304,28 +378,7 @@ def _generate_response(intent, result):
         if day:
             header += f" on {str(day).capitalize()}"
 
-        header += f" ({len(teacher_names)}):"
-
-        lines = [header, ""]
-
-        for teacher in teacher_names:
-
-            subjects_for_teacher = sorted(
-                teacher_subjects[teacher]
-            )
-
-            if subjects_for_teacher:
-
-                lines.append(
-                    f"• {teacher} — "
-                    f"{', '.join(subjects_for_teacher)}"
-                )
-
-            else:
-
-                lines.append(f"• {teacher}")
-
-        return "\n".join(lines)
+        return format_teacher_list(header, data)
 
     # =====================================================
     # FIND FREE FACULTY
@@ -705,3 +758,4 @@ def _generate_response(intent, result):
 
 class ResponseGenerator:
     generate = staticmethod(_generate_response)
+    format_teacher_list = staticmethod(format_teacher_list)

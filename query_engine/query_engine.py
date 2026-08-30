@@ -18,6 +18,8 @@ This module only queries the canonical data.
 
 from __future__ import annotations
 
+import re
+
 from typing import Any, Dict, List, Optional
 
 
@@ -557,6 +559,115 @@ class QueryEngine:
         return {
             "query_type": "class_schedule",
             "class_name": class_name,
+            "day": self._day(day) if day else None,
+            "slot": self._slot(slot),
+            "count": len(results),
+            "results": results,
+        }
+
+    # =========================================================
+    # SEMESTER SCHEDULE
+    #
+    # A "semester" is not a field stored anywhere in the
+    # timetable data. It is derived dynamically from the
+    # LEADING digits of each event's class_name (e.g.
+    # "7CS-DS" -> semester 7, "3CSA" -> semester 3, "5CS-D"
+    # -> semester 5). No semester-to-class mapping, class
+    # name, or faculty name is hard-coded here - the mapping
+    # is computed on the fly from whatever class names are
+    # actually present in the loaded timetable data, so it
+    # stays correct even if the timetable data changes.
+    # =========================================================
+
+    @staticmethod
+    def _semester_from_class_name(
+        class_name: Any
+    ) -> Optional[int]:
+
+        if not class_name:
+            return None
+
+        match = re.match(
+            r"\s*(\d+)",
+            str(class_name)
+        )
+
+        if not match:
+            return None
+
+        try:
+            return int(match.group(1))
+        except (TypeError, ValueError):
+            return None
+
+    def semester_schedule(
+        self,
+        semester: Any,
+        day: Optional[str] = None,
+        slot: Optional[Any] = None
+    ) -> Dict[str, Any]:
+
+        try:
+            target_semester = int(semester)
+        except (TypeError, ValueError):
+
+            return {
+                "query_type": "semester_schedule",
+                "semester": semester,
+                "day": self._day(day) if day else None,
+                "slot": self._slot(slot),
+                "count": 0,
+                "results": [],
+            }
+
+        results = []
+
+        for event in self._events():
+
+            record_class = self._get(
+                event,
+                "class_name",
+                "class"
+            )
+
+            record_semester = self._semester_from_class_name(
+                record_class
+            )
+
+            if record_semester != target_semester:
+                continue
+
+            record_day = self._get(
+                event,
+                "day"
+            )
+
+            record_slot = self._get(
+                event,
+                "slot"
+            )
+
+            if day:
+
+                if not self._same_day(
+                    record_day,
+                    day
+                ):
+                    continue
+
+            if slot is not None:
+
+                if not self._same_slot(
+                    record_slot,
+                    slot
+                ):
+                    continue
+
+            results.append(event)
+
+        return {
+            "query_type": "semester_schedule",
+            "semester": target_semester,
             "day": self._day(day) if day else None,
             "slot": self._slot(slot),
             "count": len(results),
