@@ -1199,6 +1199,7 @@ class FacultyAbsenceEngine:
 
             recommendations.append({
                 "block_index": block_index,
+                "day": day,
                 "slots": best["slots"],
                 "slot_time": best["slot_time"],
                 "period_count": best["period_count"],

@@ -16,6 +16,7 @@ from import_engine.import_manager import ImportManager
 from data_engine.canonical_event_matcher import CanonicalEventMatcher
 from scheduling.workload_engine import FacultyWorkloadEngine
 from scheduling.absence_engine import FacultyAbsenceEngine
+from scheduling.assignment_engine import FacultyAssignmentEngine
 from query_engine import QueryEngine
 from query_engine.natural_language_query import NaturalLanguageQuery
 
@@ -119,6 +120,35 @@ class FacultyAIChatbot:
         )
 
         print("Query Engine ready.")
+
+                # --------------------------------------------------
+        # SCHEDULING ENGINES
+        # --------------------------------------------------
+
+        print("Creating Workload Engine...")
+
+        self.workload_engine = FacultyWorkloadEngine(
+            self.query_engine
+        )
+
+        print("Workload Engine ready.")
+
+        print("Creating Absence Engine...")
+
+        self.absence_engine = FacultyAbsenceEngine(
+            self.query_engine
+        )
+
+        print("Absence Engine ready.")
+
+        print("Creating Assignment Engine...")
+
+        self.assignment_engine = FacultyAssignmentEngine(
+            self.query_engine,
+            self.absence_engine
+        )
+
+        print("Assignment Engine ready.")
         self.workload_engine = FacultyWorkloadEngine(
             self.query_engine
         )

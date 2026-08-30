@@ -740,9 +740,33 @@ class NaturalLanguageQuery:
 
         if teacher and (
             has_schedule
-            or re.search(r"\b(teaching|teach)\b", text)
+            or (
+                re.search(r"\b(teaching|teach)\b", text)
+                and not (
+                    "who teaches" in text
+                    or "faculty teaching" in text
+                    or "teachers teaching" in text
+                    or "faculty teaches" in text
+                    or "teacher teaching" in text
+                )
+            )
         ):
             return "teacher_schedule"
+
+        # -----------------------------------------------------
+        # FACULTY TEACHING A CLASS
+        # -----------------------------------------------------
+
+        class_name = self.extract_class(query)
+
+        if class_name and (
+            re.search(r"\bwho\s+teaches\b", text)
+            or "faculty teaching" in text
+            or "teachers teaching" in text
+            or "faculty teaches" in text
+            or "teacher teaching" in text
+        ):
+            return "class_teacher_search"
 
         # -----------------------------------------------------
         # SUBJECT SEARCH
@@ -754,12 +778,11 @@ class NaturalLanguageQuery:
         ):
             return "subject_search"
 
-        if re.search(
-            r"\b(faculty|teachers?)\s+teaching\b",
-            text
+        if (
+            "faculty teaching" in text
+            or "teachers teaching" in text
         ):
             return "subject_search"
-
         # -----------------------------------------------------
         # CLASS SCHEDULE
         # -----------------------------------------------------
@@ -977,6 +1000,48 @@ class NaturalLanguageQuery:
         )
 
         return self.result_to_list(result)
+    
+
+        # =========================================================
+    # FACULTY TEACHING A CLASS
+    # =========================================================
+
+    def execute_class_teacher_search(
+        self,
+        class_name: Optional[str]
+    ) -> List[Dict[str, Any]]:
+
+        if not class_name:
+            return []
+
+        events = self.call_engine_method(
+            "get_events"
+        )
+
+        records = self.result_to_list(
+            events
+        )
+
+        class_key = self.normalize_lower(
+            class_name
+        )
+
+        results = []
+
+        for record in records:
+
+            record_class = self.normalize_lower(
+                self.field(
+                    record,
+                    "class_name"
+                )
+            )
+
+            if record_class == class_key:
+                results.append(record)
+
+        return results
+
 
     # =========================================================
     # SUBJECT SEARCH
@@ -1202,6 +1267,25 @@ class NaturalLanguageQuery:
                 "count": len(records),
                 "results": records,
                 "subject": subject
+            }
+
+        # -----------------------------------------------------
+        # FACULTY TEACHING A CLASS
+        # -----------------------------------------------------
+
+        if intent == "class_teacher_search":
+            class_name = self.extract_class(query)
+
+            records = self.execute_class_teacher_search(
+                class_name
+            )
+
+            return {
+                "intent": intent,
+                "success": True,
+                "count": len(records),
+                "results": records,
+                "class_name": class_name
             }
 
         return {

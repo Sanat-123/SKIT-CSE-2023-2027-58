@@ -1,0 +1,24 @@
+[
+  {
+    "assignment_id": 1,
+    "absent_teacher": "Mr. Rajesh Rajaan",
+    "replacement_teacher": "Ms. Nidhi Srivastav",
+    "day": "Monday",
+    "slots": [
+      4
+    ],
+    "slot_time": "11:15 - 12:15",
+    "period_count": 1,
+    "subject": "AOA AI-A",
+    "subject_family": "aoa",
+    "class_name": "5CS",
+    "group_name": "",
+    "type": "Theory",
+    "room": "104",
+    "priority": 1,
+    "priority_reason": "same subject + same class context",
+    "class_similarity": 2,
+    "subject_similarity": 3,
+    "status": "confirmed"
+  }
+]
