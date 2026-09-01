@@ -1125,6 +1125,89 @@ class QueryEngine:
             "groups": sorted(groups),
         }
 
+    # =========================================================
+    # CLASS REFERENCE RESOLUTION
+    #
+    # ONE generic resolver, reused by every class-scoped query
+    # (class-teacher search, class timetable, and any future
+    # class-scoped feature) so "7CS" is interpreted the same way
+    # everywhere, instead of each caller deciding independently
+    # whether to treat it as an exact class or a broad prefix.
+    #
+    # The distinction is derived entirely from the canonical
+    # classes actually present in the currently loaded timetable
+    # (via entity_knowledge()) - never from a fixed list:
+    #
+    #   EXACT: the raw text the user typed is itself (after the
+    #          same normalization _contains() already uses) one
+    #          of the real canonical class names.
+    #
+    #   BROAD: the raw text is not itself a canonical class, but
+    #          is contained in one or more canonical class names
+    #          (the same substring rule class_schedule() already
+    #          uses internally) - e.g. "7cs" is a prefix shared
+    #          by "7CSA", "7CS-DS", "7CS-IOT", etc.
+    #
+    #   NONE:  the raw text matches no canonical class at all.
+    #
+    # No class name, semester, or department code is hard-coded
+    # here - if tomorrow's timetable has entirely different
+    # classes, this resolves against whatever entity_knowledge()
+    # reports for that data.
+    # =========================================================
+
+    def resolve_class_reference(
+        self,
+        raw_text: Any
+    ) -> Dict[str, Any]:
+
+        query_text = self._normalize(raw_text)
+
+        if not query_text:
+            return {
+                "query_text": raw_text,
+                "mode": "none",
+                "class_name": None,
+                "matching_classes": [],
+            }
+
+        known_classes = self.entity_knowledge()["classes"]
+
+        exact_matches = [
+            class_name
+            for class_name in known_classes
+            if self._normalize(class_name) == query_text
+        ]
+
+        if exact_matches:
+            return {
+                "query_text": raw_text,
+                "mode": "exact",
+                "class_name": exact_matches[0],
+                "matching_classes": exact_matches,
+            }
+
+        matching_classes = sorted(
+            class_name
+            for class_name in known_classes
+            if self._contains(class_name, raw_text)
+        )
+
+        if matching_classes:
+            return {
+                "query_text": raw_text,
+                "mode": "broad",
+                "class_name": None,
+                "matching_classes": matching_classes,
+            }
+
+        return {
+            "query_text": raw_text,
+            "mode": "none",
+            "class_name": None,
+            "matching_classes": [],
+        }
+
 
 # =============================================================
 # IMPORTANT HELPER METHODS

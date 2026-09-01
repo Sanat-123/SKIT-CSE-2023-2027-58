@@ -1,3 +1,40 @@
+def _class_reference_label(result):
+    """
+    Builds a human-readable label for a class-scoped response
+    (class-teacher search or class timetable), distinguishing an
+    EXACT canonical class match from a BROAD query that matches
+    several canonical classes at once.
+
+    Driven entirely by the "class_name"/"class_query_mode"/
+    "matching_classes" keys QueryPlanner attaches to the result
+    (see QueryEngine.resolve_class_reference()) - never a
+    hard-coded class name. Used by both the FIND_CLASS_TEACHER
+    and SHOW_TIMETABLE branches below so "7CS" is described the
+    same way regardless of which query type asked about it.
+
+    Returns None if there is no class information to label.
+    """
+
+    if not isinstance(result, dict):
+        return None
+
+    class_name = result.get("class_name")
+
+    if not class_name:
+        return None
+
+    mode = result.get("class_query_mode")
+    matching_classes = result.get("matching_classes") or []
+
+    if mode == "broad" and len(matching_classes) > 1:
+        return (
+            f"classes matching {class_name} "
+            f"({', '.join(matching_classes)})"
+        )
+
+    return class_name
+
+
 def _group_teachers_with_subjects(results):
     """
     Groups a list of timetable event records by teacher,
@@ -234,7 +271,10 @@ def _generate_response(intent, result):
         if teacher:
             subject_label = f"{teacher}'s schedule"
         elif class_name:
-            subject_label = f"Timetable for {class_name}"
+            class_label = (
+                _class_reference_label(timetable) or class_name
+            )
+            subject_label = f"Timetable for {class_label}"
         elif room:
             subject_label = f"Timetable for Room {room}"
         else:
@@ -480,9 +520,11 @@ def _generate_response(intent, result):
             class_name = result.get("class_name")
             day = result.get("day")
 
+        class_label = _class_reference_label(result) or class_name
+
         header = (
-            f"Faculty teaching {class_name}"
-            if class_name
+            f"Faculty teaching {class_label}"
+            if class_label
             else "Faculty teaching this class"
         )
 

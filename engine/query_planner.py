@@ -158,19 +158,14 @@ class QueryPlanner:
         # method already used by SHOW_TIMETABLE for a class.
         # No class name, faculty name, or day is hard-coded.
         #
-        # IMPORTANT - raw text vs resolved value:
-        # The entity extractor resolves the typed class text
-        # (e.g. "7cs") to a single best-matching canonical
-        # class name (e.g. "7CS-DS"). Since class_schedule()
-        # already matches by substring containment, we look
-        # the class up using the RAW TEXT the user typed
-        # rather than that single resolved value. This means
-        # a bare class family such as "7CS" naturally matches
-        # every section under it (7CSA, 7CS-DS, 7CS-IOT, ...),
-        # while a fully specific query such as "7CS-DS" still
-        # matches only that section - all driven by the actual
-        # class names present in the timetable data, never
-        # hard-coded here.
+        # CLASS RESOLUTION:
+        # Uses query_engine.resolve_class_reference() - the
+        # SAME resolver SHOW_TIMETABLE's class branch below
+        # uses - so "7CS" is interpreted identically by both
+        # query types. An EXACT canonical class (e.g.
+        # "7CS-DS") narrows to just that class; a BROAD query
+        # (e.g. "7CS", a prefix shared by several canonical
+        # classes) covers every matching class and says so.
         # ==================================================
 
         if intent == "FIND_CLASS_TEACHER":
@@ -191,13 +186,18 @@ class QueryPlanner:
                 else None
             )
 
-            lookup_class_name = raw_class_text or class_name
-
-            display_class_name = (
-                raw_class_text.upper()
-                if raw_class_text
-                else class_name
+            resolution = query_engine.resolve_class_reference(
+                raw_class_text or class_name
             )
+
+            if resolution["mode"] == "exact":
+                lookup_class_name = resolution["class_name"]
+                display_class_name = resolution["class_name"]
+            else:
+                lookup_class_name = raw_class_text or class_name
+                display_class_name = (
+                    (raw_class_text or class_name).upper()
+                )
 
             result = query_engine.class_schedule(
                 class_name=lookup_class_name,
@@ -214,6 +214,8 @@ class QueryPlanner:
                 "count": len(results),
                 "results": results,
                 "class_name": display_class_name,
+                "class_query_mode": resolution["mode"],
+                "matching_classes": resolution["matching_classes"],
                 "day": result.get("day", day)
             }
 
@@ -287,15 +289,51 @@ class QueryPlanner:
 
             # ------------------------------
             # Class timetable
+            #
+            # Uses the SAME query_engine.resolve_class_reference()
+            # resolver as FIND_CLASS_TEACHER above, so "7CS" is
+            # interpreted identically whether the user asks "who
+            # teaches 7CS" or "show timetable of 7CS".
             # ------------------------------
 
             if class_name:
 
-                return query_engine.class_schedule(
-                    class_name=class_name,
+                raw_class_text = (
+                    classes[0].get("text")
+                    if classes and isinstance(classes[0], dict)
+                    else None
+                )
+
+                resolution = (
+                    query_engine.resolve_class_reference(
+                        raw_class_text or class_name
+                    )
+                )
+
+                if resolution["mode"] == "exact":
+                    lookup_class_name = resolution["class_name"]
+                    display_class_name = resolution["class_name"]
+                else:
+                    lookup_class_name = (
+                        raw_class_text or class_name
+                    )
+                    display_class_name = (
+                        (raw_class_text or class_name).upper()
+                    )
+
+                result = query_engine.class_schedule(
+                    class_name=lookup_class_name,
                     day=day,
                     slot=slot
                 )
+
+                result["class_name"] = display_class_name
+                result["class_query_mode"] = resolution["mode"]
+                result["matching_classes"] = (
+                    resolution["matching_classes"]
+                )
+
+                return result
 
             # ------------------------------
             # Room timetable
