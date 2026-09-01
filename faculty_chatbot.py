@@ -27,8 +27,6 @@ class FacultyAIChatbot:
         print("LOADING FACULTY AI KNOWLEDGE BASE")
         print("=" * 70)
 
-        self.extractor = EntityExtractor()
-
         # --------------------------------------------------
         # FILES
         # --------------------------------------------------
@@ -117,6 +115,30 @@ class FacultyAIChatbot:
         )
 
         print("Query Engine ready.")
+
+        # --------------------------------------------------
+        # ENTITY EXTRACTOR
+        #
+        # Built AFTER the QueryEngine, from
+        # query_engine.entity_knowledge() - the faculty/
+        # subject/room/class/group names actually present in
+        # the CURRENTLY loaded canonical timetable. This
+        # replaces the previous dependency on a separate,
+        # independently-built database/faculty.db snapshot,
+        # which could silently drift out of sync with the
+        # real data (confirmed: it was already missing real
+        # entries such as "Dr. Nilam", "3CS", and "5CS").
+        # If the timetable source files are replaced, entity
+        # recognition now automatically reflects the new
+        # data on the next FacultyAIChatbot() construction -
+        # no separate database rebuild step required.
+        # --------------------------------------------------
+
+        self.extractor = EntityExtractor(
+            knowledge=self.query_engine.entity_knowledge()
+        )
+
+        print("Entity Extractor ready.")
 
                 # --------------------------------------------------
         # SCHEDULING ENGINES

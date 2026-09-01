@@ -1008,39 +1008,37 @@ class NaturalLanguageQuery:
 
     def execute_class_teacher_search(
         self,
-        class_name: Optional[str]
+        class_name: Optional[str],
+        day: Optional[str] = None
     ) -> List[Dict[str, Any]]:
 
         if not class_name:
             return []
 
-        events = self.call_engine_method(
-            "get_events"
+        # -----------------------------------------------------
+        # Reuses the EXISTING QueryEngine.class_schedule()
+        # method - the same canonical-event access method
+        # execute_class_schedule() above already uses for a
+        # class lookup. There is no "get_events" method on
+        # QueryEngine; the canonical events for a class are
+        # always reached through class_schedule(), which
+        # already performs the correct substring/fuzzy
+        # class-name matching (so a bare query like "7CS"
+        # naturally covers every section under it, e.g.
+        # "7CS-DS"/"7CSA", while a fully specific "7CS-DS"
+        # still narrows to just that section - see
+        # QueryEngine.class_schedule() and its underlying
+        # _contains() helper). No class name is hard-coded
+        # here.
+        # -----------------------------------------------------
+
+        result = self.call_engine_method(
+            "class_schedule",
+            class_name=class_name,
+            day=day
         )
 
-        records = self.result_to_list(
-            events
-        )
-
-        class_key = self.normalize_lower(
-            class_name
-        )
-
-        results = []
-
-        for record in records:
-
-            record_class = self.normalize_lower(
-                self.field(
-                    record,
-                    "class_name"
-                )
-            )
-
-            if record_class == class_key:
-                results.append(record)
-
-        return results
+        return self.result_to_list(result)
 
 
     # =========================================================
@@ -1277,7 +1275,8 @@ class NaturalLanguageQuery:
             class_name = self.extract_class(query)
 
             records = self.execute_class_teacher_search(
-                class_name
+                class_name,
+                day
             )
 
             return {
@@ -1285,7 +1284,8 @@ class NaturalLanguageQuery:
                 "success": True,
                 "count": len(records),
                 "results": records,
-                "class_name": class_name
+                "class_name": class_name,
+                "day": day
             }
 
         return {
@@ -1607,6 +1607,46 @@ class NaturalLanguageQuery:
                     f"Faculty teaching {subject}: "
                     + ", ".join(teachers)
                 )
+
+            return f"{len(records)} records found."
+
+        # -----------------------------------------------------
+        # FACULTY TEACHING A CLASS
+        # -----------------------------------------------------
+
+        if intent == "class_teacher_search":
+            class_name = result.get("class_name")
+            day = result.get("day")
+            records = result.get("results", [])
+
+            if not records:
+                message = f"No faculty found teaching {class_name}"
+
+                if day:
+                    message += f" on {day}"
+
+                return message + "."
+
+            teachers = []
+
+            for record in records:
+                if not isinstance(record, dict):
+                    continue
+
+                teacher = record.get("teacher")
+
+                if teacher:
+                    teachers.append(str(teacher))
+
+            teachers = self._unique(teachers)
+
+            if teachers:
+                message = f"Faculty teaching {class_name}"
+
+                if day:
+                    message += f" on {day}"
+
+                return message + ": " + ", ".join(teachers)
 
             return f"{len(records)} records found."
 

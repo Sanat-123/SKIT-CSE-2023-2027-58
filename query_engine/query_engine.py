@@ -1053,6 +1053,78 @@ class QueryEngine:
             "contract_records": len(contracts),
         }
 
+    # =========================================================
+    # ENTITY KNOWLEDGE
+    #
+    # Returns the distinct faculty/subject/room/class/group
+    # names actually present in the CURRENTLY LOADED canonical
+    # timetable data - the same shape previously produced by
+    # database/knowledge_loader.py's KnowledgeLoader.load()
+    # (teachers/subjects/rooms/classes/groups), but always
+    # computed fresh from self._events() instead of a separate,
+    # independently-built snapshot.
+    #
+    # This is the single source of truth EntityExtractor uses
+    # for fuzzy-matching candidate lists, so entity recognition
+    # can never drift out of sync with what QueryEngine can
+    # actually answer questions about: if the timetable source
+    # files are replaced with different data, the very next
+    # FacultyAIChatbot() construction sees the new names
+    # automatically, with no separate database rebuild step.
+    #
+    # No faculty name, class name, subject, or room is
+    # hard-coded here - every value comes from whatever records
+    # are currently loaded.
+    # =========================================================
+
+    def entity_knowledge(self) -> Dict[str, List[str]]:
+
+        events = self._events()
+
+        teachers = set()
+        subjects = set()
+        rooms = set()
+        classes = set()
+        groups = set()
+
+        for event in events:
+
+            teacher = self._get(event, "teacher")
+            if teacher:
+                teachers.add(str(teacher))
+
+            subject = self._get(event, "subject")
+            if subject:
+                subjects.add(str(subject))
+
+            room = self._get(event, "room")
+            if room:
+                rooms.add(str(room))
+
+            class_name = self._get(
+                event,
+                "class_name",
+                "class"
+            )
+            if class_name:
+                classes.add(str(class_name))
+
+            group_name = self._get(
+                event,
+                "group_name",
+                "group"
+            )
+            if group_name:
+                groups.add(str(group_name))
+
+        return {
+            "teachers": sorted(teachers),
+            "subjects": sorted(subjects),
+            "rooms": sorted(rooms),
+            "classes": sorted(classes),
+            "groups": sorted(groups),
+        }
+
 
 # =============================================================
 # IMPORTANT HELPER METHODS

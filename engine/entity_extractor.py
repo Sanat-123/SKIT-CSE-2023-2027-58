@@ -1,4 +1,3 @@
-from database.knowledge_loader import KnowledgeLoader
 from engine.phrase_generator import PhraseGenerator
 from engine.universal_matcher import UniversalMatcher
 
@@ -58,9 +57,33 @@ class EntityExtractor:
         "ji"
     }
 
-    def __init__(self):
+    def __init__(self, knowledge=None):
 
-        self.knowledge = KnowledgeLoader.load()
+        # -------------------------------------------------
+        # PREFERRED: an explicit knowledge dict, e.g. from
+        # QueryEngine.entity_knowledge() - built fresh from
+        # whatever timetable data is CURRENTLY loaded, so
+        # entity recognition can never drift out of sync
+        # with the live canonical events. This is how
+        # FacultyAIChatbot (faculty_chatbot.py) always
+        # constructs this class.
+        #
+        # FALLBACK: if no knowledge dict is supplied, fall
+        # back to the original static database/faculty.db
+        # snapshot (database/knowledge_loader.py). This keeps
+        # older standalone callers (e.g. ad-hoc test scripts
+        # that construct EntityExtractor() with no arguments)
+        # working unchanged. The live application path never
+        # takes this branch.
+        # -------------------------------------------------
+
+        if knowledge is not None:
+            self.knowledge = knowledge
+        else:
+            from database.knowledge_loader import (
+                KnowledgeLoader
+            )
+            self.knowledge = KnowledgeLoader.load()
 
     # ---------------------------------------------------------
     # Remove conversational words
