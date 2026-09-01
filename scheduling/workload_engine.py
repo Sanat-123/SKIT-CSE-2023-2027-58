@@ -238,6 +238,28 @@ class FacultyWorkloadEngine:
         workload = defaultdict(int)
         subjects = defaultdict(set)
 
+        # teacher -> (class_name, subject) -> day -> list of slots
+        #
+        # Groups this teacher's matching canonical events by the
+        # actual class_name + subject pair recorded on each event,
+        # so the response can show exactly which class(es) the
+        # workload comes from - e.g. two different lab groups
+        # under the same class_name still show as two separate
+        # entries, since their subject text differs (this mirrors
+        # how the real data is structured; nothing here invents a
+        # "section" concept beyond the class_name/subject fields
+        # that are actually present on the canonical event).
+        #
+        # The event's own day is also part of the grouping key
+        # (even when no day filter was requested) so that, for a
+        # semester-wide query spanning multiple days, the SAME
+        # class_name/subject combination taught on two different
+        # days is never merged into one misleading slot list (a
+        # slot number is only meaningful within a single day).
+        class_breakdown = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(list))
+        )
+
         for event in self._events():
 
             teacher = self._teacher(event)
@@ -260,9 +282,11 @@ class FacultyWorkloadEngine:
             if record_semester != target_semester:
                 continue
 
+            event_day = self._event_day(event)
+
             if day_key:
 
-                if self._event_day(event) != day_key:
+                if event_day != day_key:
                     continue
 
             workload[teacher] += 1
@@ -278,16 +302,69 @@ class FacultyWorkloadEngine:
             if subject:
                 subjects[teacher].add(subject)
 
+            class_label = str(class_name).strip() if class_name else ""
+
+            slot = (
+                event.get("slot")
+                if isinstance(event, dict)
+                else None
+            )
+
+            class_breakdown[teacher][
+                (class_label, subject)
+            ][event_day].append(slot)
+
         results = []
 
         for teacher, periods in workload.items():
+
+            classes = []
+
+            for (class_label, subject), by_day in sorted(
+                class_breakdown[teacher].items(),
+                key=lambda item: (item[0][0], item[0][1])
+            ):
+
+                # -------------------------------------------
+                # Only attach a day label to each breakdown
+                # row when this class_name/subject pair is
+                # genuinely taught on more than one distinct
+                # day within the current (unfiltered) result.
+                # When a specific day was requested, or this
+                # combination only ever occurs on one day
+                # anyway, the day is left out entirely to
+                # avoid repeating information the header
+                # already states or that carries no extra
+                # meaning.
+                # -------------------------------------------
+
+                show_day_label = (
+                    not day_key and len(by_day) > 1
+                )
+
+                for event_day, slots in sorted(by_day.items()):
+
+                    sorted_slots = sorted(
+                        slot for slot in slots if slot is not None
+                    )
+
+                    classes.append({
+                        "class_name": class_label,
+                        "subject": subject,
+                        "day": (
+                            event_day if show_day_label else None
+                        ),
+                        "slots": sorted_slots,
+                        "period_count": len(sorted_slots),
+                    })
 
             results.append({
                 "teacher": teacher,
                 "periods": periods,
                 "subjects": sorted(
                     subjects.get(teacher, [])
-                )
+                ),
+                "classes": classes,
             })
 
         results.sort(

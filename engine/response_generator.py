@@ -79,14 +79,19 @@ def format_teacher_workload_list(header, results):
     """
     Builds a bulleted "Teacher — N periods" list from
     workload-engine-style records - each a dict with at
-    least "teacher" and "periods", and optionally a
-    "subjects" list (see FacultyWorkloadEngine.semester_workload).
+    least "teacher" and "periods", and optionally a "classes"
+    breakdown (see FacultyWorkloadEngine.semester_workload):
+    a list of {"class_name", "subject", "slots", "period_count"}
+    dicts, one per distinct class_name/subject pair the teacher
+    was found teaching.
 
-    Unlike format_teacher_list() (which only shows the
-    subjects a faculty member covers), this shows the actual
-    period COUNT for each faculty member, all derived from
-    whatever records are passed in - no faculty name, class
-    name, or period count is hard-coded.
+    Every class_name, subject, and slot number shown here comes
+    directly from the canonical event records passed in - nothing
+    is invented. If a record's class_name or subject is empty,
+    it is shown as-is (empty) rather than fabricated, and if no
+    "classes" breakdown is present at all, this falls back to the
+    older "subjects"-only summary so callers that don't supply a
+    breakdown still get a sensible response.
 
     `header` should NOT include the count or the trailing
     colon - both are added here.
@@ -114,14 +119,69 @@ def format_teacher_workload_list(header, results):
 
         period_word = "period" if periods == 1 else "periods"
 
-        line = f"• {teacher} — {periods} {period_word}"
+        lines.append(f"• {teacher} — {periods} {period_word}")
 
-        subjects = item.get("subjects") or []
+        classes = item.get("classes")
 
-        if subjects:
-            line += f" ({', '.join(subjects)})"
+        if classes:
 
-        lines.append(line)
+            for class_row in classes:
+
+                if not isinstance(class_row, dict):
+                    continue
+
+                class_name = str(
+                    class_row.get("class_name", "")
+                ).strip()
+
+                subject = str(
+                    class_row.get("subject", "")
+                ).strip()
+
+                event_day = class_row.get("day")
+
+                slots = class_row.get("slots") or []
+
+                slot_text = ", ".join(
+                    str(slot) for slot in slots
+                )
+
+                detail_parts = [
+                    part for part in (class_name, subject)
+                    if part
+                ]
+
+                detail = " — ".join(detail_parts)
+
+                if event_day:
+                    day_label = str(event_day).capitalize()
+                    if detail:
+                        detail += f" ({day_label})"
+                    else:
+                        detail = day_label
+
+                if slot_text:
+
+                    if detail:
+                        detail += f" — Slots {slot_text}"
+                    else:
+                        detail = f"Slots {slot_text}"
+
+                if detail:
+                    lines.append(f"  - {detail}")
+
+        else:
+
+            subjects = item.get("subjects") or []
+
+            if subjects:
+                lines[-1] += f" ({', '.join(subjects)})"
+
+        lines.append("")
+
+    # Drop the trailing blank line left after the last entry.
+    while lines and lines[-1] == "":
+        lines.pop()
 
     return "\n".join(lines)
 
