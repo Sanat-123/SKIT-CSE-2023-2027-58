@@ -14,6 +14,8 @@ from data_engine.canonical_event_matcher import CanonicalEventMatcher
 from scheduling.workload_engine import FacultyWorkloadEngine
 from scheduling.absence_engine import FacultyAbsenceEngine
 from scheduling.assignment_engine import FacultyAssignmentEngine
+from scheduling.room_shift_store import RoomShiftStore
+from scheduling.lab_shift_planner import LabShiftCoordinator
 from query_engine import QueryEngine
 from query_engine.natural_language_query import NaturalLanguageQuery
 
@@ -179,6 +181,38 @@ class FacultyAIChatbot:
         )
 
         print("Absence Engine ready.")
+
+        # --------------------------------------------------
+        # LAB SHIFT COORDINATOR
+        #
+        # Reuses self.query_engine (room/class lookups) and
+        # self.absence_engine (the SAME multi-period block
+        # detection already used for absence/replacement
+        # planning). Confirmed room shifts are persisted to a
+        # SEPARATE small overlay store
+        # (data/room_shifts.json), never by mutating canonical
+        # events, so the original source timetable stays fully
+        # traceable.
+        # --------------------------------------------------
+
+        self.room_shift_store = RoomShiftStore()
+
+        self.lab_shift_planner = LabShiftCoordinator(
+            self.query_engine,
+            self.absence_engine,
+            store=self.room_shift_store
+        )
+
+        # Holds the most recently PROPOSED (not yet confirmed)
+        # room-shift plan for this chatbot session, so a
+        # follow-up "confirm the shift" message can reference
+        # it. This is conversational state only - the planner
+        # itself (LabShiftCoordinator) remains stateless and
+        # side-effect free; plan_shift()/confirm_shift() take
+        # explicit arguments and never read this attribute.
+        self._pending_lab_shift_plan = None
+
+        print("Lab Shift Coordinator ready.")
 
         self.nl_query = NaturalLanguageQuery(
             self.query_engine
@@ -587,6 +621,87 @@ class FacultyAIChatbot:
             }.get(number % 10, "th")
 
         return f"{number}{suffix}"
+
+    # ======================================================
+    # EXTRACT SLOT NUMBER (for room-shift queries)
+    # ======================================================
+
+    @staticmethod
+    def _extract_slot(query):
+
+        text = str(query).lower()
+
+        match = re.search(r"\bslot\s+(\d{1,2})\b", text)
+
+        if match:
+            return int(match.group(1))
+
+        match = re.search(r"\bperiod\s+(\d{1,2})\b", text)
+
+        if match:
+            return int(match.group(1))
+
+        return None
+
+    # ======================================================
+    # EXTRACT ROOM (for room-shift queries)
+    #
+    # Resolved purely against the rooms actually present in
+    # the currently loaded canonical timetable
+    # (query_engine.entity_knowledge()) - never a hard-coded
+    # room list. Prefers an explicit "room <X>" mention, then
+    # falls back to scanning the query text for any known room
+    # name (longest names checked first, so a short numeric
+    # room name never incorrectly matches inside a longer one).
+    # ======================================================
+
+    def _extract_room(self, query):
+
+        text = str(query)
+
+        known_rooms = (
+            self.query_engine.entity_knowledge().get(
+                "rooms",
+                []
+            )
+        )
+
+        if not known_rooms:
+            return None
+
+        match = re.search(
+            r"room\s+([A-Za-z0-9:\-]+)",
+            text,
+            re.IGNORECASE
+        )
+
+        if match:
+
+            resolution = (
+                self.lab_shift_planner.resolve_room(
+                    match.group(1)
+                )
+            )
+
+            if resolution["mode"] == "exact":
+                return resolution["room"]
+
+        for room in sorted(
+            known_rooms,
+            key=len,
+            reverse=True
+        ):
+
+            pattern = (
+                r"(?<![A-Za-z0-9])"
+                + re.escape(room)
+                + r"(?![A-Za-z0-9])"
+            )
+
+            if re.search(pattern, text, re.IGNORECASE):
+                return room
+
+        return None
 
     def _extract_period_teacher(self, query):
         """Resolve a specific faculty name from a period query."""
@@ -1621,6 +1736,200 @@ class FacultyAIChatbot:
                         results
                     )
                 )
+
+        # --------------------------------------------------
+        # LAB SHIFTING / VENUE CHANGE
+        #
+        # Example:
+        # Which rooms are available for this lab?
+        # Find another room for this lab.
+        # Can this lab be shifted to room 103?
+        # Shift the lab to room 103.
+        # Confirm the shift.
+        #
+        # Delegates entirely to self.lab_shift_planner
+        # (scheduling/lab_shift_planner.py) - the multi-period
+        # block, room resolution, and availability logic all
+        # live there, reusing the existing absence_engine block
+        # detection and query_engine room/class lookups. This
+        # branch only extracts the query's teacher/day/slot/
+        # room and formats the result - no scheduling decision
+        # is made here.
+        #
+        # CONFIRM is checked first: if the previous turn already
+        # proposed a plan (self._pending_lab_shift_plan) and this
+        # message says "confirm", that plan is confirmed rather
+        # than re-parsed as a new request.
+        # --------------------------------------------------
+
+        confirm_words = ("confirm", "yes confirm", "go ahead")
+
+        is_confirm_intent = (
+            any(word in text for word in confirm_words)
+            and self._pending_lab_shift_plan is not None
+        )
+
+        if is_confirm_intent:
+
+            plan = self._pending_lab_shift_plan
+            self._pending_lab_shift_plan = None
+
+            result = self.lab_shift_planner.confirm_shift(
+                plan
+            )
+
+            if result.get("success"):
+
+                shift = result["shift"]
+
+                return (
+                    f"Confirmed: {shift['teacher']}'s "
+                    f"{shift['class_name']} "
+                    f"({shift['subject']}) on "
+                    f"{shift['day'].capitalize()} "
+                    f"slots {shift['slots']} has been moved "
+                    f"from room {shift['source_room']} to "
+                    f"room {shift['target_room']}."
+                )
+
+            reason = result.get("reason", "unknown")
+
+            return (
+                "Could not confirm the room shift "
+                f"({reason}). The timetable state may have "
+                "changed since the plan was proposed - please "
+                "ask again to get a fresh proposal."
+            )
+
+        room_shift_words = ("shift", "move")
+        room_availability_words = ("available", "free", "another")
+        room_context_words = ("room", "lab", "venue")
+
+        has_room_shift_intent = (
+            (
+                any(word in text for word in room_shift_words)
+                or any(
+                    word in text
+                    for word in room_availability_words
+                )
+            )
+            and any(word in text for word in room_context_words)
+        )
+
+        if has_room_shift_intent:
+
+            shift_teacher = self._extract_period_teacher(query)
+            shift_day = self._extract_day(query)
+            shift_slot = self._extract_slot(query)
+            shift_room = self._extract_room(query)
+
+            if not shift_teacher or not shift_day or (
+                shift_slot is None
+            ):
+
+                return (
+                    "Please specify the faculty, day, and slot "
+                    "for the lab you want to move - for example "
+                    "\"Which rooms are available for Dr. X's "
+                    "lab on Monday slot 6?\""
+                )
+
+            if shift_room:
+
+                plan = self.lab_shift_planner.plan_shift(
+                    teacher=shift_teacher,
+                    day=shift_day,
+                    slot=shift_slot,
+                    target_room=shift_room
+                )
+
+                if plan.get("success"):
+
+                    self._pending_lab_shift_plan = plan
+
+                    return (
+                        f"Proposed: move {plan['teacher']}'s "
+                        f"{plan['class_name']} "
+                        f"({plan['subject']}) on "
+                        f"{plan['day'].capitalize()} slots "
+                        f"{plan['slots']} from room "
+                        f"{plan['source_room']} to room "
+                        f"{plan['target_room']}. Reply "
+                        "\"confirm\" to apply this change."
+                    )
+
+                reason = plan.get("reason", "unknown")
+
+                if reason == "target_room_occupied":
+
+                    conflicts = plan.get("conflicts", [])
+
+                    conflict_lines = "; ".join(
+                        f"slot {c['slot']} ({c['teacher']} - "
+                        f"{c['class_name']})"
+                        for c in conflicts
+                    )
+
+                    return (
+                        f"Room {plan.get('target_room')} is "
+                        "not available for the complete lab "
+                        f"block: {conflict_lines}."
+                    )
+
+                return (
+                    "Could not propose that room shift "
+                    f"({reason})."
+                )
+
+            availability = (
+                self.lab_shift_planner
+                .find_available_rooms(
+                    teacher=shift_teacher,
+                    day=shift_day,
+                    slot=shift_slot
+                )
+            )
+
+            if not availability.get("success"):
+
+                reason = availability.get(
+                    "reason",
+                    "unknown"
+                )
+
+                return (
+                    "Could not find that lab "
+                    f"({reason})."
+                )
+
+            available_rooms = availability.get(
+                "available_rooms",
+                []
+            )
+
+            if not available_rooms:
+
+                return (
+                    f"No alternative room is free for "
+                    f"{availability['teacher']}'s "
+                    f"{availability['class_name']} on "
+                    f"{availability['day'].capitalize()} "
+                    f"slots {availability['slots']} "
+                    f"(currently room "
+                    f"{availability['source_room']})."
+                )
+
+            return (
+                f"Rooms available for "
+                f"{availability['teacher']}'s "
+                f"{availability['class_name']} "
+                f"({availability['subject']}) on "
+                f"{availability['day'].capitalize()} slots "
+                f"{availability['slots']} (currently room "
+                f"{availability['source_room']}) "
+                f"({len(available_rooms)}):\n\n"
+                + ", ".join(available_rooms)
+            )
 
         # ==================================================
         # ABSENT FACULTY / REPLACEMENT QUERY
