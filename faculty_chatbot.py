@@ -16,6 +16,8 @@ from scheduling.absence_engine import FacultyAbsenceEngine
 from scheduling.assignment_engine import FacultyAssignmentEngine
 from scheduling.room_shift_store import RoomShiftStore
 from scheduling.lab_shift_planner import LabShiftCoordinator
+from scheduling.multi_absence_planner import MultiAbsenceCoordinator
+from scheduling.what_if_coordinator import WhatIfCoordinator
 from query_engine import QueryEngine
 from query_engine.natural_language_query import NaturalLanguageQuery
 
@@ -213,6 +215,48 @@ class FacultyAIChatbot:
         self._pending_lab_shift_plan = None
 
         print("Lab Shift Coordinator ready.")
+
+        # --------------------------------------------------
+        # MULTI-ABSENCE COORDINATOR
+        #
+        # Previously verified independently (test_multi_
+        # absence_planner.py, 26/26 checks passed) but not
+        # wired into the live chatbot. Constructed here so the
+        # What-If Coordinator (below) can reuse its
+        # side-effect-free plan() for absence what-if
+        # simulation, without duplicating any block-detection
+        # or replacement-ranking logic.
+        # --------------------------------------------------
+
+        self.multi_absence_coordinator = MultiAbsenceCoordinator(
+            self.absence_engine,
+            self.assignment_engine,
+            self.workload_engine
+        )
+
+        print("Multi-Absence Coordinator ready.")
+
+        # --------------------------------------------------
+        # WHAT-IF COORDINATOR
+        #
+        # A thin layer that only delegates to the three
+        # existing side-effect-free planners/checkers above
+        # (multi_absence_coordinator.plan(),
+        # lab_shift_planner.plan_shift(),
+        # assignment_engine.check_conflict()) and normalizes
+        # their results into one consistent, explanatory
+        # shape. Never confirms/persists anything itself.
+        # --------------------------------------------------
+
+        self.what_if_coordinator = WhatIfCoordinator(
+            self.query_engine,
+            self.absence_engine,
+            self.assignment_engine,
+            self.lab_shift_planner,
+            self.multi_absence_coordinator
+        )
+
+        print("What-If Coordinator ready.")
 
         self.nl_query = NaturalLanguageQuery(
             self.query_engine
@@ -1651,6 +1695,166 @@ class FacultyAIChatbot:
                 )
 
                 return "\n".join(lines)
+
+        # --------------------------------------------------
+        # WHAT-IF SIMULATION
+        #
+        # Example:
+        # What if Dr. X is absent on Monday?
+        # What happens if Dr. X is absent Tuesday?
+        # Would moving this lab to <room> cause a conflict?
+        #
+        # Checked BEFORE the semester/absence/lab-shift
+        # branches below, since a hypothetical phrasing (e.g.
+        # "what if I move this lab to another room") would
+        # otherwise be caught by the real lab-shift branch and
+        # treated as an actual shift request instead of a
+        # simulation.
+        #
+        # Delegates entirely to self.what_if_coordinator
+        # (scheduling/what_if_coordinator.py), which itself
+        # only calls the existing side-effect-free planners -
+        # no scheduling decision is made here, and nothing is
+        # ever confirmed/persisted from this branch.
+        # --------------------------------------------------
+
+        whatif_words = ("what if", "what happens if")
+
+        is_whatif_intent = (
+            any(word in text for word in whatif_words)
+            or ("would" in text and "conflict" in text)
+        )
+
+        if is_whatif_intent:
+
+            whatif_teacher = self._extract_period_teacher(
+                query
+            )
+            whatif_day = self._extract_day(query)
+            whatif_slot = self._extract_slot(query)
+            whatif_room = self._extract_room(query)
+
+            room_shift_words = (
+                "shift", "shifting", "shifted",
+                "move", "moving", "moved",
+            )
+            room_context_words = ("room", "lab", "venue")
+
+            has_lab_shift_whatif = (
+                any(word in text for word in room_shift_words)
+                and any(
+                    word in text for word in room_context_words
+                )
+            )
+
+            if has_lab_shift_whatif:
+
+                if (
+                    not whatif_teacher
+                    or not whatif_day
+                    or whatif_slot is None
+                    or not whatif_room
+                ):
+
+                    return (
+                        "Please specify the faculty, day, "
+                        "slot, and target room for the "
+                        "what-if lab shift - for example "
+                        "\"Would moving Dr. X's lab on "
+                        "Monday slot 6 to room 103 cause a "
+                        "conflict?\""
+                    )
+
+                result = (
+                    self.what_if_coordinator.simulate_lab_shift(
+                        teacher=whatif_teacher,
+                        day=whatif_day,
+                        slot=whatif_slot,
+                        target_room=whatif_room,
+                    )
+                )
+
+                header = (
+                    f"What if {result['current_state'].get('teacher', whatif_teacher)}'s "
+                    f"lab on {str(whatif_day).capitalize()} "
+                    f"slots {result['current_state'].get('slots')} "
+                    f"were moved to room {whatif_room}?"
+                )
+
+                if result["outcome"] == "feasible":
+
+                    return (
+                        f"{header}\n\nNo conflict - room "
+                        f"{whatif_room} is free for the "
+                        "complete block. (This is only a "
+                        "simulation - nothing has been "
+                        "changed.)"
+                    )
+
+                if result["outcome"] == "conflict":
+
+                    conflict_lines = "; ".join(
+                        f"slot {c['slot']} "
+                        f"({c['teacher']} - {c['class_name']})"
+                        for c in result["conflicts"]
+                    )
+
+                    return (
+                        f"{header}\n\nYes - room "
+                        f"{whatif_room} is occupied: "
+                        f"{conflict_lines}. (This is only a "
+                        "simulation - nothing has been "
+                        "changed.)"
+                    )
+
+                return (
+                    f"{header}\n\nCould not simulate this "
+                    f"shift ({result.get('reason', 'unknown')})."
+                )
+
+            if whatif_teacher and whatif_day:
+
+                result = self.what_if_coordinator.simulate_absence(
+                    whatif_teacher,
+                    whatif_day,
+                )
+
+                header = (
+                    f"What if {whatif_teacher} is absent on "
+                    f"{str(whatif_day).capitalize()}?"
+                )
+
+                if result["outcome"] == "no_scheduled_classes":
+
+                    return (
+                        f"{header}\n\n{whatif_teacher} has no "
+                        f"scheduled classes on "
+                        f"{str(whatif_day).capitalize()} - no "
+                        "impact."
+                    )
+
+                summary = (
+                    f"{len(result['affected_entities'])} "
+                    f"block(s) affected ({result['outcome']})."
+                )
+
+                lines = [header, "", summary]
+
+                if result.get("recommendation"):
+                    lines.append(result["recommendation"])
+
+                lines.append(
+                    "(This is only a simulation - nothing has "
+                    "been changed.)"
+                )
+
+                return "\n".join(lines)
+
+            return (
+                "Please specify the faculty and day for the "
+                "what-if scenario - for example \"What if "
+                "Dr. X is absent on Monday?\""
+            )
 
         # --------------------------------------------------
         # SEMESTER-WIDE FACULTY LOAD

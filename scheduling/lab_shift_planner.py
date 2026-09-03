@@ -118,45 +118,100 @@ class LabShiftCoordinator:
     # BLOCK RESOLUTION
     #
     # Identifies the COMPLETE multi-period block (from the
-    # ORIGINAL canonical timetable) that contains the requested
-    # slot, for the given teacher and day. Reuses
-    # absence_engine._affected_blocks() - the same block detection
-    # already used for absence/replacement planning - rather than
-    # re-implementing contiguous-slot grouping here.
+    # ORIGINAL canonical timetable) for the given teacher/day,
+    # using EITHER a specific slot OR a class_name/subject pair
+    # to disambiguate which of that teacher's blocks on that day
+    # is meant. Reuses absence_engine._affected_blocks() - the
+    # same block detection already used for absence/replacement
+    # planning - rather than re-implementing contiguous-slot
+    # grouping here.
+    #
+    # ROOT CAUSE OF THE PREVIOUS BUG (kept here as a record of
+    # why this validation exists): query_engine._day()/_slot()
+    # are deliberately LENIENT, general-purpose normalizers used
+    # throughout the whole project - given text they don't
+    # recognize, they pass it through lowercased rather than
+    # failing. That is correct behavior for those shared
+    # primitives, but it meant a caller who passed arguments in
+    # the wrong position (e.g. a subject string where a day was
+    # expected) got no early signal: day_key/slot_key were both
+    # "truthy", so the old code proceeded to search for a
+    # (day="sma lab group 1", slot="wednesday") block that could
+    # never exist, and reported the generic, misleading
+    # "source_event_not_found". This method now explicitly
+    # validates day_key against the fixed set of real weekday
+    # names, and validates a supplied slot_key is actually
+    # numeric, so a genuinely malformed call fails fast with a
+    # specific "invalid_day"/"invalid_slot" reason instead of a
+    # confusing not-found.
     # ============================================================
+
+    _VALID_DAYS = frozenset({
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    })
 
     def find_lab_block(
         self,
         teacher=None,
         class_name=None,
+        subject=None,
         day=None,
         slot=None,
     ):
 
         day_key = self.query_engine._day(day)
-        slot_key = self.query_engine._slot(slot)
 
-        if not day_key or slot_key is None:
+        if not day_key:
             return {
                 "found": False,
-                "reason": "missing_day_or_slot",
+                "reason": "missing_day",
             }
+
+        if day_key not in self._VALID_DAYS:
+            return {
+                "found": False,
+                "reason": "invalid_day",
+            }
+
+        slot_key = None
+
+        if slot is not None:
+
+            slot_key = self.query_engine._slot(slot)
+
+            if not isinstance(slot_key, int):
+                return {
+                    "found": False,
+                    "reason": "invalid_slot",
+                }
 
         resolved_teacher = self._text(teacher)
 
         # ---------------------------------------------------
         # If no teacher was given but a class was, resolve the
         # teacher from the existing class_schedule() lookup for
-        # that class/day/slot - reusing the existing class
+        # that class/day(/slot), reusing the existing class
         # query rather than a new lookup mechanism.
         # ---------------------------------------------------
 
         if not resolved_teacher and class_name:
 
+            class_lookup = {
+                "class_name": class_name,
+                "day": day_key,
+            }
+
+            if slot_key is not None:
+                class_lookup["slot"] = slot_key
+
             class_result = self.query_engine.class_schedule(
-                class_name=class_name,
-                day=day_key,
-                slot=slot_key,
+                **class_lookup
             )
 
             class_events = class_result.get("results", [])
@@ -189,14 +244,69 @@ class LabShiftCoordinator:
             day_key,
         )
 
-        matching_blocks = [
-            block
-            for block in blocks
-            if any(
-                self.query_engine._same_slot(s, slot_key)
-                for s in block.get("slots", [])
+        if slot_key is not None:
+
+            # -----------------------------------------------
+            # Identify by slot (original behavior) - the block
+            # containing the requested slot. This is the mode
+            # plan_shift()/confirm_shift()/find_available_rooms()
+            # always use internally.
+            # -----------------------------------------------
+
+            matching_blocks = [
+                block
+                for block in blocks
+                if any(
+                    self.query_engine._same_slot(s, slot_key)
+                    for s in block.get("slots", [])
+                )
+            ]
+
+        else:
+
+            # -----------------------------------------------
+            # Identify by class_name and/or subject instead of
+            # a slot number - both, when given, must match
+            # (normalized) the block's own class_name/subject.
+            # -----------------------------------------------
+
+            class_key = (
+                self.query_engine._normalize(class_name)
+                if class_name
+                else None
             )
-        ]
+
+            subject_key = (
+                self.query_engine._normalize(subject)
+                if subject
+                else None
+            )
+
+            if not class_key and not subject_key:
+                return {
+                    "found": False,
+                    "reason": "missing_slot_or_class_subject",
+                }
+
+            matching_blocks = []
+
+            for block in blocks:
+
+                if class_key and (
+                    self.query_engine._normalize(
+                        block.get("class_name")
+                    ) != class_key
+                ):
+                    continue
+
+                if subject_key and (
+                    self.query_engine._normalize(
+                        block.get("subject")
+                    ) != subject_key
+                ):
+                    continue
+
+                matching_blocks.append(block)
 
         if not matching_blocks:
             return {
@@ -210,7 +320,34 @@ class LabShiftCoordinator:
                 "reason": "ambiguous_source_block",
             }
 
-        block = dict(matching_blocks[0])
+        matched_block = matching_blocks[0]
+
+        # -----------------------------------------------------
+        # LAB-ONLY VALIDATION
+        #
+        # find_lab_block() must never report a genuine match for
+        # a Theory/Seminar/other non-Lab session as a "found" lab
+        # block. This checks the block's own canonical "type"
+        # field - the SAME field absence_engine._affected_blocks()
+        # already groups by (block["type"] is populated directly
+        # from the underlying canonical events' "type" field, and
+        # every event within one block already shares that same
+        # type, since block grouping itself is keyed by type).
+        # No subject-text heuristic (e.g. checking for the word
+        # "lab" in the subject) is used - only the event's actual
+        # recorded type.
+        # -----------------------------------------------------
+
+        if self.query_engine._normalize(
+            matched_block.get("type")
+        ) != "lab":
+
+            return {
+                "found": False,
+                "reason": "non_lab_event",
+            }
+
+        block = dict(matched_block)
         block["teacher"] = resolved_teacher
         block["day"] = day_key
         block["slot_time"] = (
