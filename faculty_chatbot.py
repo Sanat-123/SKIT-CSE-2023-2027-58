@@ -27,88 +27,126 @@ from query_engine.natural_language_query import NaturalLanguageQuery
 
 class FacultyAIChatbot:
 
-    def __init__(self, files=None):
+    def __init__(self, files=None, matcher=None):
 
         print("\n" + "=" * 70)
         print("LOADING FACULTY AI KNOWLEDGE BASE")
         print("=" * 70)
 
         # --------------------------------------------------
-        # FILES
+        # PRE-BUILT CANONICAL MATCHER (OPTIONAL)
+        #
+        # Lets a caller that has ALREADY imported and
+        # canonicalized timetable data itself (e.g. the web
+        # app, which lets a user upload files through its own
+        # ImportManager-based pipeline) hand that finished
+        # CanonicalEventMatcher straight to FacultyAIChatbot,
+        # instead of FacultyAIChatbot importing the same files
+        # a second time through a second, independent pipeline.
+        # `matcher.match()` is assumed to have already been
+        # called by the caller. `files` is ignored (kept only
+        # as informational metadata) whenever `matcher` is
+        # supplied. When `matcher` is omitted, behavior is
+        # completely unchanged from before: FacultyAIChatbot
+        # imports `files` (or its own default file list) itself.
         # --------------------------------------------------
 
-        if files is None:
-            files = [
-                "data/Facultywise TT 20 sep.pdf",
-                "data/classwise TT 27 sep.pdf",
-                "data/Location wise TT 27 sep 2025.pdf",
-                "data/timetable.xlsx",
-                "data/test_timetable.csv"
-            ]
+        if matcher is not None:
 
-        self.files = files
+            self.files = files
 
-        # --------------------------------------------------
-        # IMPORT DATA
-        # --------------------------------------------------
+            self.matcher = matcher
 
-        manager = ImportManager()
+            print(
+                "\nUsing a pre-built canonical timetable "
+                "(skipping file import)."
+            )
 
-        all_records = []
+            summary = self.matcher.summary()
 
-        print("\nImporting timetable files...")
+            print(
+                f"Canonical events: "
+                f"{summary.get('canonical_events', len(self.matcher.events))}"
+            )
 
-        for file_path in files:
+        else:
 
-            try:
+            # --------------------------------------------------
+            # FILES
+            # --------------------------------------------------
 
-                print(f"\nLoading: {file_path}")
+            if files is None:
+                files = [
+                    "data/Facultywise TT 20 sep.pdf",
+                    "data/classwise TT 27 sep.pdf",
+                    "data/Location wise TT 27 sep 2025.pdf",
+                    "data/timetable.xlsx",
+                    "data/test_timetable.csv"
+                ]
 
-                result = manager.import_file(file_path)
+            self.files = files
 
-                if isinstance(result, dict):
-                    records = result.get("records", [])
-                else:
-                    records = result
+            # --------------------------------------------------
+            # IMPORT DATA
+            # --------------------------------------------------
 
-                print(
-                    f"Imported: {len(records)} records"
-                )
+            manager = ImportManager()
 
-                all_records.extend(records)
+            all_records = []
 
-            except Exception as e:
+            print("\nImporting timetable files...")
 
-                print(
-                    f"Warning: Could not import {file_path}"
-                )
+            for file_path in files:
 
-                print(e)
+                try:
 
-        print("\n" + "-" * 70)
+                    print(f"\nLoading: {file_path}")
 
-        print(
-            f"Total imported records: {len(all_records)}"
-        )
+                    result = manager.import_file(file_path)
 
-        # --------------------------------------------------
-        # CANONICAL MATCHING
-        # --------------------------------------------------
+                    if isinstance(result, dict):
+                        records = result.get("records", [])
+                    else:
+                        records = result
 
-        print("\nBuilding canonical timetable...")
+                    print(
+                        f"Imported: {len(records)} records"
+                    )
 
-        self.matcher = CanonicalEventMatcher(
-            all_records
-        )
+                    all_records.extend(records)
 
-        self.matcher.match()
+                except Exception as e:
 
-        summary = self.matcher.summary()
+                    print(
+                        f"Warning: Could not import {file_path}"
+                    )
 
-        print(
-            f"Canonical events: "
-            f"{summary.get('canonical_events', len(self.matcher.events))}"
-        )
+                    print(e)
+
+            print("\n" + "-" * 70)
+
+            print(
+                f"Total imported records: {len(all_records)}"
+            )
+
+            # --------------------------------------------------
+            # CANONICAL MATCHING
+            # --------------------------------------------------
+
+            print("\nBuilding canonical timetable...")
+
+            self.matcher = CanonicalEventMatcher(
+                all_records
+            )
+
+            self.matcher.match()
+
+            summary = self.matcher.summary()
+
+            print(
+                f"Canonical events: "
+                f"{summary.get('canonical_events', len(self.matcher.events))}"
+            )
 
         # --------------------------------------------------
         # QUERY ENGINE
