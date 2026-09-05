@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, date
 
 from engine.query_tokenizer import QueryTokenizer
 from engine.stopword_filter import StopWordFilter
@@ -18,6 +18,8 @@ from scheduling.room_shift_store import RoomShiftStore
 from scheduling.lab_shift_planner import LabShiftCoordinator
 from scheduling.multi_absence_planner import MultiAbsenceCoordinator
 from scheduling.what_if_coordinator import WhatIfCoordinator
+from scheduling.exam_duty_store import ExamDutyStore
+from scheduling.exam_duty_planner import ExamDutyCoordinator
 from query_engine import QueryEngine
 from query_engine.natural_language_query import NaturalLanguageQuery
 
@@ -257,6 +259,35 @@ class FacultyAIChatbot:
         )
 
         print("What-If Coordinator ready.")
+
+        # --------------------------------------------------
+        # EXAM DUTY COORDINATOR
+        #
+        # Reuses self.query_engine (HH:MM validation) and
+        # self.workload_engine (exam_duty_candidates() - the
+        # existing free/busy + workload ranking). Confirmed exam
+        # duties are persisted to a SEPARATE small overlay store
+        # (data/exam_duties.json), never by mutating canonical
+        # events, AssignmentStore, or RoomShiftStore.
+        # --------------------------------------------------
+
+        self.exam_duty_store = ExamDutyStore()
+
+        self.exam_duty_coordinator = ExamDutyCoordinator(
+            self.query_engine,
+            self.workload_engine,
+            store=self.exam_duty_store
+        )
+
+        # Holds the most recently PROPOSED (not yet confirmed)
+        # exam-duty plan for this chatbot session, so a follow-up
+        # "confirm" message can reference it. Conversational state
+        # only - ExamDutyCoordinator itself remains stateless and
+        # side-effect free; plan_duty()/confirm_duty() take
+        # explicit arguments and never read this attribute.
+        self._pending_exam_duty_plan = None
+
+        print("Exam Duty Coordinator ready.")
 
         self.nl_query = NaturalLanguageQuery(
             self.query_engine
@@ -576,6 +607,120 @@ class FacultyAIChatbot:
             ):
 
                 return days[word]
+
+        return None
+
+    # ======================================================
+    # EXTRACT REAL CALENDAR DATE
+    #
+    # Unlike _extract_day() above (which only ever recognizes a
+    # recurring WEEKDAY name), this recognizes an actual calendar
+    # date - required for exam duty, which must be tied to a real
+    # date rather than a recurring weekday/slot so that different
+    # exam weeks are never confused with one another.
+    #
+    # Supported examples:
+    #
+    #     2026-09-10          (ISO)
+    #     10-09-2026
+    #     10/09/2026
+    #     10 September 2026
+    #     10th Sept 2026
+    #     September 10 2026
+    #     Sept 10, 2026
+    #
+    # Returns an ISO "YYYY-MM-DD" string, or None if no real,
+    # valid calendar date is present. No specific institutional
+    # date is hard-coded here - only generic calendar-month-name
+    # vocabulary used purely to parse whatever date the user
+    # actually typed.
+    # ======================================================
+
+    _MONTH_NAMES = {
+        "january": 1, "jan": 1,
+        "february": 2, "feb": 2,
+        "march": 3, "mar": 3,
+        "april": 4, "apr": 4,
+        "may": 5,
+        "june": 6, "jun": 6,
+        "july": 7, "jul": 7,
+        "august": 8, "aug": 8,
+        "september": 9, "sep": 9, "sept": 9,
+        "october": 10, "oct": 10,
+        "november": 11, "nov": 11,
+        "december": 12, "dec": 12,
+    }
+
+    @classmethod
+    def _extract_exam_date(cls, query):
+
+        text = str(query).lower()
+
+        # ISO: 2026-09-10
+        match = re.search(
+            r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b",
+            text
+        )
+
+        if match:
+            try:
+                year, month, day = (
+                    int(part) for part in match.groups()
+                )
+                return date(year, month, day).isoformat()
+            except ValueError:
+                return None
+
+        # DD-MM-YYYY or DD/MM/YYYY
+        match = re.search(
+            r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b",
+            text
+        )
+
+        if match:
+            try:
+                day, month, year = (
+                    int(part) for part in match.groups()
+                )
+                return date(year, month, day).isoformat()
+            except ValueError:
+                return None
+
+        # 10 September 2026 / 10th Sept 2026
+        match = re.search(
+            r"\b(\d{1,2})(?:st|nd|rd|th)?\s+"
+            r"([a-z]+)\s+(\d{4})\b",
+            text
+        )
+
+        if match:
+            day = int(match.group(1))
+            month = cls._MONTH_NAMES.get(match.group(2))
+            year = int(match.group(3))
+
+            if month:
+                try:
+                    return date(year, month, day).isoformat()
+                except ValueError:
+                    return None
+
+        # September 10 2026 / September 10, 2026 / Sept 10th 2026
+        match = re.search(
+            r"\b([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+"
+            r"(\d{4})\b",
+            text
+        )
+
+        if match:
+            month = cls._MONTH_NAMES.get(match.group(1))
+            day = int(match.group(2))
+            year = int(match.group(3))
+
+            if month:
+                try:
+                    return date(year, month, day).isoformat()
+                except ValueError:
+                    return None
 
         return None
 
@@ -1116,120 +1261,7 @@ class FacultyAIChatbot:
         # USE EXISTING VALIDATED QUERY ENGINE
         # --------------------------------------------------
 
-        
         # --------------------------------------------------
-        # USE EXISTING VALIDATED QUERY ENGINE
-        # --------------------------------------------------
-                # --------------------------------------------------
-        # EXAM DUTY RECOMMENDATION
-        # --------------------------------------------------
-
-        text = str(query).lower()
-
-        exam_duty_words = (
-            "exam duty",
-            "exam duties",
-            "exam invigilation",
-            "invigilation",
-            "assign duty",
-            "assigned duty",
-            "take duty",
-            "can take duty",
-            "who should be assigned",
-            "who should take",
-        )
-
-        is_exam_duty_intent = any(
-            phrase in text
-            for phrase in exam_duty_words
-        )
-
-        if is_exam_duty_intent:
-
-            try:
-
-                duty_result = (
-                    self.workload_engine.exam_duty_candidates(
-                        day,
-                        start_time,
-                        end_time
-                    )
-                )
-
-            except Exception as e:
-
-                return (
-                    "Unable to calculate exam-duty candidates.\n"
-                    f"Error: {e}"
-                )
-
-            if not isinstance(duty_result, dict):
-
-                return (
-                    "Unable to retrieve exam-duty candidates."
-                )
-
-            candidates = duty_result.get(
-                "results",
-                []
-            )
-
-            if not candidates:
-
-                return (
-                    f"No suitable faculty members were found "
-                    f"for exam duty on {day} from "
-                    f"{start_time} to {end_time}."
-                )
-
-            lines = []
-
-            lines.append(
-                f"Recommended faculty for exam duty on "
-                f"{day} from {start_time} to {end_time}:"
-            )
-
-            lines.append("")
-
-            for index, candidate in enumerate(
-                candidates,
-                start=1
-            ):
-
-                teacher = str(
-                    candidate.get(
-                        "teacher",
-                        ""
-                    )
-                ).strip()
-
-                daily_periods = candidate.get(
-                    "daily_periods",
-                    0
-                )
-
-                priority = candidate.get(
-                    "priority",
-                    ""
-                )
-
-                if not teacher:
-                    continue
-
-                lines.append(
-                    f"{index}. {teacher} "
-                    f"— {daily_periods} periods "
-                    f"— {priority} priority"
-                )
-
-            lines.append("")
-
-            lines.append(
-                f"Total candidates: {len(candidates)}"
-            )
-
-            return "\n".join(lines)
-                # --------------------------------------------------
         # DETECT BUSY / OCCUPIED / UNAVAILABLE INTENT
         # --------------------------------------------------
 
@@ -1463,9 +1495,90 @@ class FacultyAIChatbot:
 
         # --------------------------------------------------
         # EXAM DUTY / INVIGILATION
+        #
+        # Confirmation-capable and duty-conflict-aware actions
+        # delegate to self.exam_duty_coordinator
+        # (scheduling/exam_duty_planner.py, backed by
+        # scheduling/exam_duty_store.py). Regular timetable data
+        # only has a recurring weekday/slot concept, which cannot
+        # distinguish different exam weeks, so any action that
+        # needs to account for already-CONFIRMED exam duties (or
+        # that PERSISTS one) always requires a real calendar date
+        # (extracted by self._extract_exam_date()). When no real
+        # date is present, this falls back to the existing,
+        # previously-verified FacultyWorkloadEngine.
+        # exam_duty_candidates()/assign_exam_duty() helpers
+        # directly and unchanged, so already-working weekday-only
+        # phrasing never regresses. Neither of those helpers has
+        # ever persisted anything - CONFIRMATION THROUGH
+        # exam_duty_coordinator.confirm_duty() IS THE ONLY
+        # OPERATION THAT PERSISTS AN EXAM-DUTY RECORD.
+        #
+        # CONFIRM is checked first: if the previous turn already
+        # proposed an exam-duty plan (self._pending_exam_duty_plan)
+        # and this message says "confirm", that plan is confirmed
+        # rather than re-parsed as a new request - the same
+        # propose-then-confirm pattern already used for lab shifts
+        # (self._pending_lab_shift_plan / LabShiftCoordinator.
+        # confirm_shift() above).
         # --------------------------------------------------
 
         text = str(query).lower()
+
+        exam_duty_confirm_words = (
+            "confirm",
+            "yes confirm",
+            "go ahead",
+        )
+
+        is_exam_duty_confirm = (
+            any(
+                word in text
+                for word in exam_duty_confirm_words
+            )
+            and self._pending_exam_duty_plan is not None
+        )
+
+        if is_exam_duty_confirm:
+
+            plan = self._pending_exam_duty_plan
+            self._pending_exam_duty_plan = None
+
+            result = self.exam_duty_coordinator.confirm_duty(
+                plan
+            )
+
+            if result.get("success"):
+
+                duties = result.get("duties", [])
+
+                if duties:
+                    lines = [
+                        f"Confirmed exam duty for "
+                        f"{duties[0]['exam_date']} from "
+                        f"{duties[0]['start_time']} to "
+                        f"{duties[0]['end_time']}:"
+                    ]
+                else:
+                    lines = ["Confirmed exam duty."]
+
+                lines.append("")
+
+                for index, duty in enumerate(duties, start=1):
+                    lines.append(
+                        f"{index}. {duty.get('teacher')}"
+                    )
+
+                return "\n".join(lines)
+
+            reason = result.get("reason", "unknown")
+
+            return (
+                "Could not confirm the exam duty "
+                f"({reason}). The availability state may have "
+                "changed since the plan was proposed - please "
+                "ask again to get a fresh proposal."
+            )
 
         exam_duty_words = (
             "exam duty",
@@ -1489,27 +1602,113 @@ class FacultyAIChatbot:
 
         if is_exam_duty_intent:
 
-            day = self._extract_day(query)
+            # --------------------------------------------------
+            # DUTY COUNT QUERY
+            #
+            # "How many exam duties does each faculty member
+            # have?" - date independent, delegates entirely to
+            # ExamDutyStore.duty_counts() through the coordinator.
+            # --------------------------------------------------
+
+            duty_count_words = (
+                "how many exam duties",
+                "how many exam duty",
+                "exam duty count",
+                "exam duties count",
+                "duty counts",
+            )
+
+            if any(word in text for word in duty_count_words):
+
+                counts = self.exam_duty_coordinator.duty_counts()
+
+                if not counts:
+                    return (
+                        "No exam duties have been confirmed yet."
+                    )
+
+                lines = ["Confirmed exam-duty counts:", ""]
+
+                for teacher in sorted(
+                    counts,
+                    key=lambda name: (
+                        -counts[name],
+                        name.lower()
+                    )
+                ):
+                    lines.append(
+                        f"{teacher}: {counts[teacher]}"
+                    )
+
+                return "\n".join(lines)
+
+            # --------------------------------------------------
+            # SHOW CONFIRMED EXAM DUTIES
+            #
+            # Date independent unless a real calendar date is
+            # also present in the query, in which case the list
+            # is filtered to that date.
+            # --------------------------------------------------
+
+            show_duty_words = (
+                "show exam dut",
+                "list exam dut",
+                "existing exam dut",
+                "confirmed exam dut",
+            )
+
+            if any(word in text for word in show_duty_words):
+
+                shown_date = self._extract_exam_date(query)
+
+                if shown_date:
+                    duties = (
+                        self.exam_duty_coordinator
+                        .duties_for_date(shown_date)
+                    )
+                else:
+                    duties = (
+                        self.exam_duty_coordinator.all_duties()
+                    )
+
+                if not duties:
+                    return (
+                        "No confirmed exam duties found"
+                        + (
+                            f" for {shown_date}."
+                            if shown_date else "."
+                        )
+                    )
+
+                lines = ["Confirmed exam duties:", ""]
+
+                for index, duty in enumerate(duties, start=1):
+
+                    hall_text = (
+                        f" in {duty.get('hall')}"
+                        if duty.get("hall") else ""
+                    )
+
+                    lines.append(
+                        f"{index}. {duty.get('teacher')} — "
+                        f"{duty.get('exam_date')} "
+                        f"{duty.get('start_time')}-"
+                        f"{duty.get('end_time')}{hall_text}"
+                    )
+
+                return "\n".join(lines)
+
+            # --------------------------------------------------
+            # SHARED EXTRACTION
+            # --------------------------------------------------
+
+            exam_date_text = self._extract_exam_date(query)
 
             start_time, end_time = (
                 self._extract_time_range(query)
             )
 
-            if not day:
-                return (
-                    "Please specify a day for the exam duty, "
-                    "for example Monday."
-                )
-
-            if not start_time or not end_time:
-                return (
-                    "Please specify a complete time range for "
-                    "the exam duty, for example 09:00 to 11:00."
-                )
-
-            # --------------------------------------------------
-            # EXTRACT REQUESTED FACULTY COUNT
-            # --------------------------------------------------
+            hall_text = self._extract_room(query)
 
             count_patterns = (
                 r"\bassign\s+(\d+)\s+"
@@ -1543,7 +1742,215 @@ class FacultyAIChatbot:
                     break
 
             # --------------------------------------------------
-            # ACTUAL ASSIGNMENT
+            # REAL-CALENDAR-DATE PATH
+            #
+            # Required for anything that must account for
+            # already-CONFIRMED exam duties, or that will PERSIST
+            # one.
+            # --------------------------------------------------
+
+            if exam_date_text:
+
+                if not start_time or not end_time:
+                    return (
+                        "Please specify a complete time range "
+                        "for the exam duty, for example 09:00 "
+                        "to 11:00."
+                    )
+
+                if required_count is not None:
+
+                    if required_count <= 0:
+                        return (
+                            "The number of faculty to assign "
+                            "must be greater than zero."
+                        )
+
+                    plan = self.exam_duty_coordinator.plan_duty(
+                        exam_date=exam_date_text,
+                        start_time=start_time,
+                        end_time=end_time,
+                        required_faculty=required_count,
+                        hall=hall_text,
+                    )
+
+                    if plan.get("success"):
+
+                        self._pending_exam_duty_plan = plan
+
+                        lines = [
+                            "Proposed exam duty for "
+                            f"{plan['exam_date']} from "
+                            f"{plan['start_time']} to "
+                            f"{plan['end_time']}"
+                            + (
+                                f" in {plan['hall']}"
+                                if plan.get("hall") else ""
+                            )
+                            + ":"
+                        ]
+
+                        lines.append("")
+
+                        for index, candidate in enumerate(
+                            plan["recommended"],
+                            start=1
+                        ):
+                            lines.append(
+                                f"{index}. {candidate['teacher']} "
+                                f"— {candidate['daily_periods']} "
+                                "periods — existing exam duties: "
+                                f"{candidate['existing_exam_duty_count']}"
+                            )
+
+                        lines.append("")
+                        lines.append(
+                            "Reply \"confirm\" to apply this "
+                            "exam-duty assignment."
+                        )
+
+                        return "\n".join(lines)
+
+                    reason = plan.get("reason", "unknown")
+
+                    if reason == "insufficient_available_faculty":
+                        return (
+                            "Only "
+                            f"{plan.get('available_count', 0)} "
+                            "faculty members are available, but "
+                            f"{plan.get('required_count')} were "
+                            "requested."
+                        )
+
+                    if reason == "no_eligible_faculty":
+                        return (
+                            "No suitable faculty members were "
+                            "found for exam duty on "
+                            f"{plan.get('exam_date', exam_date_text)} "
+                            f"from {start_time} to {end_time}."
+                        )
+
+                    if reason == "invalid_date":
+                        return (
+                            "I could not understand that exam "
+                            "date. Please provide a real "
+                            "calendar date, for example "
+                            "2026-09-10."
+                        )
+
+                    if reason == "invalid_time_range":
+                        return (
+                            "I could not understand the "
+                            "requested time range."
+                        )
+
+                    return (
+                        "Unable to propose an exam-duty "
+                        f"assignment ({reason})."
+                    )
+
+                # ----------------------------------------------
+                # No explicit count - date-aware, side-effect
+                # free candidate discovery for this exact date/
+                # time, which (unlike the plain-weekday fallback
+                # below) also accounts for already-CONFIRMED exam
+                # duties.
+                # ----------------------------------------------
+
+                candidate_result = (
+                    self.exam_duty_coordinator.candidates(
+                        exam_date_text,
+                        start_time,
+                        end_time
+                    )
+                )
+
+                if not candidate_result.get("success"):
+
+                    reason = candidate_result.get(
+                        "reason",
+                        "unknown"
+                    )
+
+                    if reason == "invalid_date":
+                        return (
+                            "I could not understand that exam "
+                            "date. Please provide a real "
+                            "calendar date, for example "
+                            "2026-09-10."
+                        )
+
+                    return (
+                        "Unable to calculate exam-duty "
+                        f"candidates ({reason})."
+                    )
+
+                candidates = candidate_result.get("results", [])
+
+                if not candidates:
+                    return (
+                        "No suitable faculty members were found "
+                        "for exam duty on "
+                        f"{candidate_result['exam_date']} from "
+                        f"{start_time} to {end_time}."
+                    )
+
+                lines = [
+                    "Recommended faculty for exam duty on "
+                    f"{candidate_result['exam_date']} from "
+                    f"{start_time} to {end_time}:"
+                ]
+
+                lines.append("")
+
+                for index, candidate in enumerate(
+                    candidates,
+                    start=1
+                ):
+                    lines.append(
+                        f"{index}. {candidate['teacher']} — "
+                        f"{candidate['daily_periods']} periods "
+                        "— existing exam duties: "
+                        f"{candidate['existing_exam_duty_count']}"
+                    )
+
+                lines.append("")
+                lines.append(
+                    f"Total candidates: {len(candidates)}"
+                )
+
+                return "\n".join(lines)
+
+            # --------------------------------------------------
+            # NO CALENDAR DATE GIVEN
+            #
+            # Falls back to the existing, previously-verified
+            # weekday-only candidate discovery/assignment helpers,
+            # unchanged, so already-working phrasing (e.g. "Who is
+            # available for exam duty on Monday from 9 to 11?")
+            # keeps working exactly as before. Neither of these
+            # helpers has ever persisted anything.
+            # --------------------------------------------------
+
+            day = self._extract_day(query)
+
+            if not day:
+                return (
+                    "Please specify a day for the exam duty, "
+                    "for example Monday, or a real calendar "
+                    "date such as 2026-09-10."
+                )
+
+            if not start_time or not end_time:
+                return (
+                    "Please specify a complete time range for "
+                    "the exam duty, for example 09:00 to 11:00."
+                )
+
+            # --------------------------------------------------
+            # ACTUAL ASSIGNMENT (READ-ONLY - see module docstring
+            # in scheduling/workload_engine.py: assign_exam_duty()
+            # is a candidate-selection helper, not persistence)
             # --------------------------------------------------
 
             if required_count is not None:
@@ -1632,6 +2039,13 @@ class FacultyAIChatbot:
 
             # --------------------------------------------------
             # RECOMMENDATION ONLY
+            #
+            # NOTE: the "return" below was previously indented
+            # one level too deep (inside the "for" loop), so the
+            # function returned after formatting only the FIRST
+            # candidate instead of the complete ranked list. It
+            # is now aligned with the loop itself, so it only
+            # runs once the loop has finished.
             # --------------------------------------------------
 
             try:
@@ -1694,7 +2108,12 @@ class FacultyAIChatbot:
                     f"{priority} priority"
                 )
 
-                return "\n".join(lines)
+            lines.append("")
+            lines.append(
+                f"Total candidates: {len(candidates)}"
+            )
+
+            return "\n".join(lines)
 
         # --------------------------------------------------
         # WHAT-IF SIMULATION
